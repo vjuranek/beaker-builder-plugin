@@ -10,6 +10,7 @@
     <f:entry title="Beaker password" field="password" description="Beaker password">
       <f:textbox />
     </f:entry>
+    <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="beakerURL,login,password" />
   </f:section>
 
 </j:jelly>

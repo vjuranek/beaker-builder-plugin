@@ -7,40 +7,48 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
+import hudson.util.FormValidation;
 import net.sf.json.JSONObject;
 
+import org.fedorahosted.beaker4j.beaker.BeakerServer;
+import org.fedorahosted.beaker4j.client.BeakerClient;
+import org.fedorahosted.beaker4j.remote_model.Identity;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 public class BeakerBuilder extends Builder {
-    
+
     @DataBoundConstructor
     public BeakerBuilder(String name) {
-        
+
     }
-    
+
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
         return true;
     }
-    
+
     @Override
     public DescriptorImpl getDescriptor() {
-        return (DescriptorImpl)super.getDescriptor();
+        return (DescriptorImpl) super.getDescriptor();
     }
 
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
-        
+
         private String beakerURL;
         private String login;
         private String password;
-        
+
+        private transient final BeakerClient beakerClient;
+
         public DescriptorImpl() {
             load();
+            beakerClient = BeakerServer.getXmlRpcClient(beakerURL);
         }
 
-        public boolean isApplicable(Class<? extends AbstractProject> aClass) { 
+        public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             return true;
         }
 
@@ -52,7 +60,23 @@ public class BeakerBuilder extends Builder {
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
             req.bindJSON(this, formData);
             save();
-            return super.configure(req,formData);
+            return super.configure(req, formData);
+        }
+
+        public FormValidation doTestConnection(@QueryParameter("beakerURL") final String beakerURL,
+                @QueryParameter("login") final String login, @QueryParameter("password") final String password) {
+            System.out.println("Trying to get client for " + beakerURL);
+            BeakerClient bc = BeakerServer.getXmlRpcClient(beakerURL);
+            Identity ident = new Identity(login, password, bc);
+            try {
+                if (!ident.authenticate())
+                    // TODO localization
+                    FormValidation.error("Cannot connect to " + beakerURL + " as " + login);
+                return FormValidation.ok("Connected as " + ident.whoAmI());
+            } catch (Exception e) {
+                e.printStackTrace();
+                return FormValidation.error("Cannot connect to " + beakerURL + ", cause: " + e.getCause());
+            }
         }
 
         public String getBeakerURL() {
@@ -79,7 +103,10 @@ public class BeakerBuilder extends Builder {
             this.password = password;
         }
 
-        
+        public BeakerClient getBeakerClient() {
+            return beakerClient;
+        }
+
     }
 
 }
