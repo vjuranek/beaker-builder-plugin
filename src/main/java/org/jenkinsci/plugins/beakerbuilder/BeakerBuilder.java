@@ -75,7 +75,7 @@ public class BeakerBuilder extends Builder {
                 return FormValidation.ok("Connected as " + ident.whoAmI());
             } catch (Exception e) {
                 e.printStackTrace();
-                return FormValidation.error("Cannot connect to " + beakerURL + ", cause: " + e.getCause());
+                return FormValidation.error("Somethign went wrong, cannot connect to " + beakerURL + ", cause: " + e.getCause());
             }
         }
 
