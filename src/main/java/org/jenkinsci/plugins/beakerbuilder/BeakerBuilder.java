@@ -71,7 +71,7 @@ public class BeakerBuilder extends Builder {
             try {
                 if (!ident.authenticate())
                     // TODO localization
-                    FormValidation.error("Cannot connect to " + beakerURL + " as " + login);
+                    return FormValidation.error("Cannot connect to " + beakerURL + " as " + login);
                 return FormValidation.ok("Connected as " + ident.whoAmI());
             } catch (Exception e) {
                 e.printStackTrace();
