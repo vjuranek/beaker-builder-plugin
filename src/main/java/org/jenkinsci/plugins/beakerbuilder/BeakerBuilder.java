@@ -18,11 +18,13 @@ import java.util.logging.Logger;
 
 import net.sf.json.JSONObject;
 
+import org.apache.xmlrpc.XmlRpcException;
 import org.fedorahosted.beaker4j.beaker.BeakerServer;
 import org.fedorahosted.beaker4j.client.BeakerClient;
 import org.fedorahosted.beaker4j.remote_model.BeakerJob;
 import org.fedorahosted.beaker4j.remote_model.BeakerTask;
 import org.fedorahosted.beaker4j.remote_model.Identity;
+import org.fedorahosted.beaker4j.remote_model.TaskResult;
 import org.fedorahosted.beaker4j.remote_model.TaskStatus;
 import org.jenkinsci.plugins.beakerbuilder.utils.ConsoleLogger;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -63,7 +65,8 @@ public class BeakerBuilder extends Builder {
         if (!waitForJobCompletion())
             return false;
         
-        //TODO setup build statu based on Beaker result
+        // set build result according to Beaker result
+        setBuildResult(build);
 
         return true;
     }
@@ -126,7 +129,7 @@ public class BeakerBuilder extends Builder {
             log("[Beaker] ERROR: Something went wrong when submitting job to Beaker, got NULL from Beaker");
             return false;
         }
-
+        
         log("[Beaker] INFO: Job successfuly submitted to Beaker, job ID is " + job.getJobId());
         return true;
     }
@@ -154,6 +157,42 @@ public class BeakerBuilder extends Builder {
         return true;
     }
 
+    private void setBuildResult(AbstractBuild<?, ?> build) {
+        BeakerTask jobTask = new BeakerTask(job.getJobId(), job.getBeakerClient());
+        TaskResult result = null;
+        try {
+            result = jobTask.getInfo().getResult();
+        } catch(XmlRpcException e) {
+            LOGGER.log(Level.INFO, "Beaker error: cannot get result from Beaker ", e);
+            log("[Beaker] ERROR: Cannot get job result from Beaker, check Jenkins logs for more details");
+        }
+        
+        if(result == null) {
+            log("[Beaker] ERROR: Cannot get job result from Beaker, got NULL");
+            build.setResult(Result.FAILURE);
+        }
+        
+        switch(result) {
+            case FAIL:
+                build.setResult(Result.FAILURE);
+                break;
+            case PANIC:
+                build.setResult(Result.FAILURE);
+                break;
+            case WARN:
+                build.setResult(Result.UNSTABLE);
+                break;
+            case PASS:
+                build.setResult(Result.SUCCESS);
+                break;
+            default:
+                build.setResult(Result.UNSTABLE);
+                log("[Beaker] INFO: Unknow job result, setting build result to UNSTABLE");
+                break;
+        }
+            
+    }
+    
     private void log(String message) {
         console.logAnnot(message);
     }
