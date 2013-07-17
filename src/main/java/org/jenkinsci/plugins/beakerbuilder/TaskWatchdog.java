@@ -28,7 +28,7 @@ public class TaskWatchdog extends TimerTask {
     public synchronized void run() {
         try {
             TaskInfo info = task.getInfo();
-            TaskStatus oldStatus = status;
+            oldStatus = status;
             status = info.getState();
             isFinished = info.isFinished();
             if(oldStatus != status) {
