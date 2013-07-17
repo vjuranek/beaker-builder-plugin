@@ -24,6 +24,7 @@ import org.fedorahosted.beaker4j.remote_model.BeakerJob;
 import org.fedorahosted.beaker4j.remote_model.BeakerTask;
 import org.fedorahosted.beaker4j.remote_model.Identity;
 import org.fedorahosted.beaker4j.remote_model.TaskStatus;
+import org.jenkinsci.plugins.beakerbuilder.utils.ConsoleLogger;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -31,7 +32,9 @@ import org.kohsuke.stapler.StaplerRequest;
 public class BeakerBuilder extends Builder {
 
     private final JobSource jobSource;
+    
     private transient BeakerJob job;
+    private transient ConsoleLogger console;
 
     @DataBoundConstructor
     public BeakerBuilder(JobSource jobSource) {
@@ -46,17 +49,21 @@ public class BeakerBuilder extends Builder {
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
             throws InterruptedException {
 
+        console = new ConsoleLogger(listener);
+        
         // prepare job XML file
         if (!prepareJob(build, listener))
             return false;
 
         // schedule job
-        if (!scheduleJob(build) || job == null)
+        if (!scheduleJob(build))
             return false;
 
         // wait for job completion
         if (!waitForJobCompletion())
             return false;
+        
+        //TODO setup build statu based on Beaker result
 
         return true;
     }
@@ -91,6 +98,7 @@ public class BeakerBuilder extends Builder {
             return false;
         }
 
+        log("[Beaker] INFO: Job XML file prepared");
         return true;
     }
 
@@ -113,7 +121,13 @@ public class BeakerBuilder extends Builder {
         LOGGER.fine("Scheduling Beaker job from file " + getJobSource().getDefaultJobPath());
         LOGGER.fine("Job XML is: \n" + jobXml);
         job = getDescriptor().getBeakerClient().scheduleJob(jobXml);
+        
+        if(job == null) {
+            log("[Beaker] ERROR: Something went wrong when submitting job to Beaker, got NULL from Beaker");
+            return false;
+        }
 
+        log("[Beaker] INFO: Job successfuly submitted to Beaker, job ID is " + job.getJobId());
         return true;
     }
 
@@ -131,17 +145,17 @@ public class BeakerBuilder extends Builder {
                     log("[Beaker] INFO: Job aborted");
                     return false;
                 }
-                System.out.println("Job has changes state from " + watchdog.getOldStatus() + " state to state " + watchdog.getStatus());
+                log("[Beaker] INFO: Job has changes state from " + watchdog.getOldStatus() + " state to state " + watchdog.getStatus());
             }
         }
         timer.cancel();
+        
         log("[Beaker] INFO: Job finished");
         return true;
     }
 
     private void log(String message) {
-        // console.logAnnot(message);
-        System.out.println(message);
+        console.logAnnot(message);
     }
 
     @Override
