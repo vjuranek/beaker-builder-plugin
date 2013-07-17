@@ -19,6 +19,7 @@ import net.sf.json.JSONObject;
 
 import org.fedorahosted.beaker4j.beaker.BeakerServer;
 import org.fedorahosted.beaker4j.client.BeakerClient;
+import org.fedorahosted.beaker4j.remote_model.BeakerJob;
 import org.fedorahosted.beaker4j.remote_model.Identity;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -39,14 +40,20 @@ public class BeakerBuilder extends Builder {
     
     @Override
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
+        
+        //prepare job XML file
         if (!prepareJob(build, listener))
             return false;
-        FilePath fp = new FilePath(build.getWorkspace(), jobSource.getDefaultJobPath());
-        try {
-            System.out.println("Running job " + fp.readToString());
-        } catch(IOException e) {
-            e.printStackTrace();
-        }
+        
+        //schedule job 
+        BeakerJob job = scheduleJob(build);
+        if(job == null)
+            return false;
+        
+        //wait for job completion
+        if(!waitForJobCompletion())
+            return false;
+        
         return true;
     }
 
@@ -80,8 +87,37 @@ public class BeakerBuilder extends Builder {
         return true;
     }
     
+    private BeakerJob scheduleJob(AbstractBuild<?, ?> build) {
+        BeakerJob job = null;
+        String jobXml = null;
+        
+        try {
+            FilePath fp = new FilePath(build.getWorkspace(), getJobSource().getDefaultJobPath());
+            jobXml = fp.readToString();
+            System.out.println("job XML: " + jobXml);
+        } catch(IOException e) {
+            LOGGER.log(Level.INFO, "Beaker error: failed to read Beaker job XML file " + getJobSource().getDefaultJobPath(), e);
+        }
+        
+        if(jobXml == null) {
+            log("[Beaker] ERROR: Cannot read job source file " + getJobSource().getDefaultJobPath());
+            return job;
+        }
+        
+        LOGGER.fine("Scheduling Beaker job from file " + getJobSource().getDefaultJobPath());
+        LOGGER.fine("Job XML is: \n" + jobXml);
+        job = getDescriptor().getBeakerClient().scheduleJob(jobXml);
+        
+        return job;
+    }
+    
+    private boolean waitForJobCompletion() {
+        return true;
+    }
+    
     private void log(String message){
         //console.logAnnot(message);
+        System.out.println(message);
     }
     
     @Override
@@ -101,6 +137,7 @@ public class BeakerBuilder extends Builder {
         public DescriptorImpl() {
             load();
             beakerClient = BeakerServer.getXmlRpcClient(beakerURL);
+            beakerClient.authenticate(login, password);
         }
 
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
