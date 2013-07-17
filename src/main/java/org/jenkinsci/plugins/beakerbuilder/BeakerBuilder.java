@@ -130,6 +130,16 @@ public class BeakerBuilder extends Builder {
             return false;
         }
 
+        //job exists in Beaker, we can create an action pointing to it
+        Integer jobNum = new Integer(0);
+        try {
+           jobNum = new Integer(job.getJobId().substring(2, job.getJobId().length()));
+        } catch(NumberFormatException e) {
+            LOGGER.log(Level.INFO, "Beaker error: cannot convert job ID " + job.getJobId() + " to int");
+        }
+        BeakerBuildAction bba = new BeakerBuildAction(jobNum.intValue(), getDescriptor().getBeakerURL());
+        build.addAction(bba);
+        
         log("[Beaker] INFO: Job successfuly submitted to Beaker, job ID is " + job.getJobId());
         return true;
     }
