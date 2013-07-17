@@ -57,6 +57,8 @@ public class BeakerBuilder extends Builder {
         if (!prepareJob(build, listener))
             return false;
 
+        // TODO cleanup before leave - delete temp job XML file
+        
         // schedule job
         if (!scheduleJob(build))
             return false;
