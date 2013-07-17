@@ -129,7 +129,7 @@ public class BeakerBuilder extends Builder {
             log("[Beaker] ERROR: Something went wrong when submitting job to Beaker, got NULL from Beaker");
             return false;
         }
-        
+
         log("[Beaker] INFO: Job successfuly submitted to Beaker, job ID is " + job.getJobId());
         return true;
     }
@@ -228,6 +228,8 @@ public class BeakerBuilder extends Builder {
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
             req.bindJSON(this, formData);
+            if(beakerURL.endsWith("/"))
+                beakerURL = beakerURL.substring(0, beakerURL.length()-1);
             save();
             return super.configure(req, formData);
         }
