@@ -12,6 +12,7 @@ import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 
 import java.io.IOException;
+import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,7 +21,9 @@ import net.sf.json.JSONObject;
 import org.fedorahosted.beaker4j.beaker.BeakerServer;
 import org.fedorahosted.beaker4j.client.BeakerClient;
 import org.fedorahosted.beaker4j.remote_model.BeakerJob;
+import org.fedorahosted.beaker4j.remote_model.BeakerTask;
 import org.fedorahosted.beaker4j.remote_model.Identity;
+import org.fedorahosted.beaker4j.remote_model.TaskStatus;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -28,7 +31,8 @@ import org.kohsuke.stapler.StaplerRequest;
 public class BeakerBuilder extends Builder {
 
     private final JobSource jobSource;
-    
+    private transient BeakerJob job;
+
     @DataBoundConstructor
     public BeakerBuilder(JobSource jobSource) {
         this.jobSource = jobSource;
@@ -37,29 +41,29 @@ public class BeakerBuilder extends Builder {
     public JobSource getJobSource() {
         return jobSource;
     }
-    
+
     @Override
-    public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
-        
-        //prepare job XML file
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
+            throws InterruptedException {
+
+        // prepare job XML file
         if (!prepareJob(build, listener))
             return false;
-        
-        //schedule job 
-        BeakerJob job = scheduleJob(build);
-        if(job == null)
+
+        // schedule job
+        if (!scheduleJob(build) || job == null)
             return false;
-        
-        //wait for job completion
-        if(!waitForJobCompletion())
+
+        // wait for job completion
+        if (!waitForJobCompletion())
             return false;
-        
+
         return true;
     }
 
     private boolean prepareJob(AbstractBuild<?, ?> build, BuildListener listener) throws InterruptedException {
-        
-        // create temporary file with Beaker job 
+
+        // create temporary file with Beaker job
         try {
             jobSource.createJobFile(build, listener);
         } catch (IOException ioe) {
@@ -68,58 +72,78 @@ public class BeakerBuilder extends Builder {
             build.setResult(Result.FAILURE);
             return false;
         }
-        
+
         // verify that file really exists in workspace
         FilePath fp = new FilePath(build.getWorkspace(), jobSource.getDefaultJobPath());
         try {
-            if ( !fp.exists()) {
+            if (!fp.exists()) {
                 log("[Beaker] ERROR: Job file " + fp.getName() + " doesn't exists on channel" + fp.getChannel() + "!");
                 build.setResult(Result.FAILURE);
                 return false;
             }
         } catch (IOException e) {
-            log("[Beaker] ERROR: failed to verify that " + fp.getName() + " exists on channel" + fp.getChannel() + "! IOException cought, check Jenkins log for more details");
-            LOGGER.log(Level.INFO, "Beaker error: failed to verify that " + fp.getName() + " exists on channel" + fp.getChannel() + "!", e);
+            log("[Beaker] ERROR: failed to verify that " + fp.getName() + " exists on channel" + fp.getChannel()
+                    + "! IOException cought, check Jenkins log for more details");
+            LOGGER.log(Level.INFO,
+                    "Beaker error: failed to verify that " + fp.getName() + " exists on channel" + fp.getChannel()
+                            + "!", e);
             build.setResult(Result.FAILURE);
             return false;
         }
-        
+
         return true;
     }
-    
-    private BeakerJob scheduleJob(AbstractBuild<?, ?> build) {
-        BeakerJob job = null;
+
+    private boolean scheduleJob(AbstractBuild<?, ?> build) {
         String jobXml = null;
-        
         try {
             FilePath fp = new FilePath(build.getWorkspace(), getJobSource().getDefaultJobPath());
             jobXml = fp.readToString();
             System.out.println("job XML: " + jobXml);
-        } catch(IOException e) {
-            LOGGER.log(Level.INFO, "Beaker error: failed to read Beaker job XML file " + getJobSource().getDefaultJobPath(), e);
+        } catch (IOException e) {
+            LOGGER.log(Level.INFO, "Beaker error: failed to read Beaker job XML file "
+                    + getJobSource().getDefaultJobPath(), e);
         }
-        
-        if(jobXml == null) {
+
+        if (jobXml == null) {
             log("[Beaker] ERROR: Cannot read job source file " + getJobSource().getDefaultJobPath());
-            return job;
+            return false;
         }
-        
+
         LOGGER.fine("Scheduling Beaker job from file " + getJobSource().getDefaultJobPath());
         LOGGER.fine("Job XML is: \n" + jobXml);
         job = getDescriptor().getBeakerClient().scheduleJob(jobXml);
-        
-        return job;
-    }
-    
-    private boolean waitForJobCompletion() {
+
         return true;
     }
-    
-    private void log(String message){
-        //console.logAnnot(message);
+
+    private boolean waitForJobCompletion() {
+        BeakerTask jobTask = new BeakerTask(job.getJobId(), job.getBeakerClient());
+        TaskWatchdog watchdog = new TaskWatchdog(jobTask, TaskStatus.NEW);
+        Timer timer = new Timer();
+        timer.scheduleAtFixedRate(watchdog, TaskWatchdog.DEFAULT_DELAY, TaskWatchdog.DEFAULT_PERIOD);
+        synchronized (watchdog) {
+            while (!watchdog.isFinished()) {
+                try {
+                    watchdog.wait(); // TODO timeout
+                } catch (InterruptedException e) {
+                    timer.cancel();
+                    log("[Beaker] INFO: Job aborted");
+                    return false;
+                }
+                System.out.println("Job has changes state from " + watchdog.getOldStatus() + " state to state " + watchdog.getStatus());
+            }
+        }
+        timer.cancel();
+        log("[Beaker] INFO: Job finished");
+        return true;
+    }
+
+    private void log(String message) {
+        // console.logAnnot(message);
         System.out.println(message);
     }
-    
+
     @Override
     public DescriptorImpl getDescriptor() {
         return (DescriptorImpl) super.getDescriptor();
@@ -167,7 +191,8 @@ public class BeakerBuilder extends Builder {
                 return FormValidation.ok("Connected as " + ident.whoAmI());
             } catch (Exception e) {
                 e.printStackTrace();
-                return FormValidation.error("Somethign went wrong, cannot connect to " + beakerURL + ", cause: " + e.getCause());
+                return FormValidation.error("Somethign went wrong, cannot connect to " + beakerURL + ", cause: "
+                        + e.getCause());
             }
         }
 
@@ -200,7 +225,7 @@ public class BeakerBuilder extends Builder {
         }
 
     }
-    
+
     private static final Logger LOGGER = Logger.getLogger(BeakerBuilder.class.getName());
 
 }
