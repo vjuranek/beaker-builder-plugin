@@ -288,8 +288,12 @@ public class BeakerBuilder extends Builder {
          */
         public DescriptorImpl() {
             load();
-            beakerClient = BeakerServer.getXmlRpcClient(beakerURL);
-            beakerClient.authenticate(login, password);
+            if (beakerURL != null && !"".equals(beakerURL.trim())) {
+                beakerClient = BeakerServer.getXmlRpcClient(beakerURL);
+                beakerClient.authenticate(login, password);
+            } else {
+                beakerClient = null;
+            }
         }
 
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
