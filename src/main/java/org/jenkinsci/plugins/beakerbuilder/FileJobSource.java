@@ -53,10 +53,11 @@ public class FileJobSource extends JobSource {
     @Override
     public void createJobFile(AbstractBuild<?, ?> build, BuildListener listener) throws InterruptedException,
             IOException {
-        FilePath fp = new FilePath(build.getWorkspace(), getJobPath()); // TODO check, is path is really relative to WS
-                                                                        // root
-        String jobContent = fp.readToString(); // TODO not very safe, if e.g. some malicious user provide path to a huge
-                                               // file
+        // TODO check, if file really exists
+        // TODO check, is path is really relative to WS root
+        FilePath fp = new FilePath(build.getWorkspace(), getJobPath()); 
+        // TODO not very safe, if e.g. some malicious user provide path to a huge file                  
+        String jobContent = fp.readToString(); 
         FilePath path = createDefaultJobFile(jobContent, build, listener);
         tmpJobFile = new File(path.getRemote());
     }

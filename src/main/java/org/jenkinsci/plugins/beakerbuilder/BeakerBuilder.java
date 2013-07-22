@@ -225,6 +225,7 @@ public class BeakerBuilder extends Builder {
 
         // Beaker <---> Jenkins result mapping
         // TODO check, if this is correct
+        // TODO add ABORTED resutl
         switch (result) {
         case FAIL:
             build.setResult(Result.FAILURE);
