@@ -94,7 +94,7 @@ public class BeakerBuilder extends Builder {
      * @return True if job is prepared.
      * @throws InterruptedException
      */
-    private boolean prepareJob(AbstractBuild<?, ?> build, BuildListener listener) throws InterruptedException {
+    private synchronized boolean prepareJob(AbstractBuild<?, ?> build, BuildListener listener) throws InterruptedException {
 
         // create temporary file with Beaker job
         try {
@@ -134,7 +134,7 @@ public class BeakerBuilder extends Builder {
      * @param build
      * @return True if job scheduling is successful.
      */
-    private boolean scheduleJob(AbstractBuild<?, ?> build) {
+    private synchronized boolean scheduleJob(AbstractBuild<?, ?> build) {
         String jobXml = null;
         try {
             FilePath fp = new FilePath(build.getWorkspace(), getJobSource().getDefaultJobPath());
@@ -179,7 +179,7 @@ public class BeakerBuilder extends Builder {
      * 
      * @return True if waiting for job finishes normally.
      */
-    private boolean waitForJobCompletion() {
+    private synchronized boolean waitForJobCompletion() {
         BeakerTask jobTask = new BeakerTask(job.getJobId(), job.getBeakerClient());
         TaskWatchdog watchdog = new TaskWatchdog(jobTask, TaskStatus.NEW);
         Timer timer = new Timer();
@@ -208,7 +208,7 @@ public class BeakerBuilder extends Builder {
      * 
      * @param build
      */
-    private void setBuildResult(AbstractBuild<?, ?> build) {
+    private synchronized void setBuildResult(AbstractBuild<?, ?> build) {
         BeakerTask jobTask = new BeakerTask(job.getJobId(), job.getBeakerClient());
         TaskResult result = null;
         try {
