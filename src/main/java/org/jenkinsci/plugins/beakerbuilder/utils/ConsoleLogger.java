@@ -40,7 +40,7 @@ public class ConsoleLogger {
         }
     }
 
-    public synchronized void log(String message) {
+    public void log(String message) {
         listener.getLogger().println(message);
     }
 }
