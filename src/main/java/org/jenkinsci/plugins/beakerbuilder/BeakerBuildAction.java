@@ -2,6 +2,12 @@ package org.jenkinsci.plugins.beakerbuilder;
 
 import hudson.model.Action;
 
+/**
+ * Action, which provides link to the real job running in Beaker in the job menu. 
+ * 
+ * @author vjuranek
+ *
+ */
 public class BeakerBuildAction implements Action {
     
     private final int jobNumber;

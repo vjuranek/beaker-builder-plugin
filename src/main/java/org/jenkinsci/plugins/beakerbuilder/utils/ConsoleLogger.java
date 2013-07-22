@@ -31,6 +31,11 @@ public class ConsoleLogger {
         return listener.getLogger();
     }
 
+    /**
+     * Logs annotated messages
+     * 
+     * @param message message to be annotated
+     */
     public void logAnnot(String message) {
         byte[] msg = (message + "\n").getBytes(Charset.defaultCharset());
         try {
@@ -40,6 +45,11 @@ public class ConsoleLogger {
         }
     }
 
+    /**
+     * Logs plain text messages directly into console 
+     * 
+     * @param message message in plain text
+     */
     public void log(String message) {
         listener.getLogger().println(message);
     }

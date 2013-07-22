@@ -12,6 +12,12 @@ import jenkins.model.Jenkins;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 
+/**
+ * Represent job XML which is entered directly in job config page.
+ * 
+ * @author vjuranek
+ *
+ */
 public class StringJobSource extends JobSource {
     
     private final String jobContent;
@@ -27,12 +33,18 @@ public class StringJobSource extends JobSource {
         return jobContent;
     }
     
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void createJobFile(AbstractBuild<?,?> build, BuildListener listener) throws InterruptedException, IOException {
         FilePath path = createDefaultJobFile(jobContent, build, listener);
         tmpJobFile = new File(path.getRemote());
     }
-    
+
+    /**
+     * {@inheritDoc}
+     */
     public String getDefaultJobPath(){
         return tmpJobFile.getPath();
     }

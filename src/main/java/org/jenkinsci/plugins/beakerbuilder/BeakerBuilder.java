@@ -31,10 +31,20 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
+/**
+ * Builder which provides possibility to schedule external Beaker job, waits for its completion and sets up job result
+ * according to Beaker job status.
+ * 
+ * @author vjuranek
+ * 
+ */
 public class BeakerBuilder extends Builder {
 
+    /**
+     * Beaker job XML
+     */
     private final JobSource jobSource;
-    
+
     private transient BeakerJob job;
     private transient ConsoleLogger console;
 
@@ -47,18 +57,21 @@ public class BeakerBuilder extends Builder {
         return jobSource;
     }
 
+    /**
+     * Prepares job XML, schedule the job in Beaker, waits for the result and
+     */
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
             throws InterruptedException {
 
         console = new ConsoleLogger(listener);
-        
+
         // prepare job XML file
         if (!prepareJob(build, listener))
             return false;
 
         // TODO cleanup before leave - delete temp job XML file
-        
+
         // schedule job
         if (!scheduleJob(build))
             return false;
@@ -66,13 +79,21 @@ public class BeakerBuilder extends Builder {
         // wait for job completion
         if (!waitForJobCompletion())
             return false;
-        
+
         // set build result according to Beaker result
         setBuildResult(build);
 
         return true;
     }
 
+    /**
+     * Prepares job XML file in workspace
+     * 
+     * @param build
+     * @param listener
+     * @return True if job is prepared.
+     * @throws InterruptedException
+     */
     private boolean prepareJob(AbstractBuild<?, ?> build, BuildListener listener) throws InterruptedException {
 
         // create temporary file with Beaker job
@@ -107,6 +128,12 @@ public class BeakerBuilder extends Builder {
         return true;
     }
 
+    /**
+     * Schedules job on Beaker server. If scheduling is successful, add {@link BeakerBuildAction} to the job.
+     * 
+     * @param build
+     * @return True if job scheduling is successful.
+     */
     private boolean scheduleJob(AbstractBuild<?, ?> build) {
         String jobXml = null;
         try {
@@ -126,26 +153,32 @@ public class BeakerBuilder extends Builder {
         LOGGER.fine("Scheduling Beaker job from file " + getJobSource().getDefaultJobPath());
         LOGGER.fine("Job XML is: \n" + jobXml);
         job = getDescriptor().getBeakerClient().scheduleJob(jobXml);
-        
-        if(job == null) {
+
+        if (job == null) {
             log("[Beaker] ERROR: Something went wrong when submitting job to Beaker, got NULL from Beaker");
             return false;
         }
 
-        //job exists in Beaker, we can create an action pointing to it
+        // job exists in Beaker, we can create an action pointing to it
         Integer jobNum = new Integer(0);
         try {
-           jobNum = new Integer(job.getJobId().substring(2, job.getJobId().length()));
-        } catch(NumberFormatException e) {
+            jobNum = new Integer(job.getJobId().substring(2, job.getJobId().length()));
+        } catch (NumberFormatException e) {
             LOGGER.log(Level.INFO, "Beaker error: cannot convert job ID " + job.getJobId() + " to int");
         }
         BeakerBuildAction bba = new BeakerBuildAction(jobNum.intValue(), getDescriptor().getBeakerURL());
         build.addAction(bba);
-        
+
         log("[Beaker] INFO: Job successfuly submitted to Beaker, job ID is " + job.getJobId());
         return true;
     }
 
+    /**
+     * Starts {@link TaskWatchdog} and waits until job finishes. If job status has changes, sends notification to the
+     * console log.
+     * 
+     * @return True if waiting for job finishes normally.
+     */
     private boolean waitForJobCompletion() {
         BeakerTask jobTask = new BeakerTask(job.getJobId(), job.getBeakerClient());
         TaskWatchdog watchdog = new TaskWatchdog(jobTask, TaskStatus.NEW);
@@ -160,51 +193,65 @@ public class BeakerBuilder extends Builder {
                     log("[Beaker] INFO: Job aborted");
                     return false;
                 }
-                log("[Beaker] INFO: Job has changes state from " + watchdog.getOldStatus() + " state to state " + watchdog.getStatus());
+                log("[Beaker] INFO: Job has changes state from " + watchdog.getOldStatus() + " state to state "
+                        + watchdog.getStatus());
             }
         }
         timer.cancel();
-        
+
         log("[Beaker] INFO: Job finished");
         return true;
     }
 
+    /**
+     * Sets the build result according to Beaker job result.
+     * 
+     * @param build
+     */
     private void setBuildResult(AbstractBuild<?, ?> build) {
         BeakerTask jobTask = new BeakerTask(job.getJobId(), job.getBeakerClient());
         TaskResult result = null;
         try {
             result = jobTask.getInfo().getResult();
-        } catch(XmlRpcException e) {
+        } catch (XmlRpcException e) {
             LOGGER.log(Level.INFO, "Beaker error: cannot get result from Beaker ", e);
             log("[Beaker] ERROR: Cannot get job result from Beaker, check Jenkins logs for more details");
         }
-        
-        if(result == null) {
+
+        if (result == null) {
             log("[Beaker] ERROR: Cannot get job result from Beaker, got NULL");
             build.setResult(Result.FAILURE);
         }
-        
-        switch(result) {
-            case FAIL:
-                build.setResult(Result.FAILURE);
-                break;
-            case PANIC:
-                build.setResult(Result.FAILURE);
-                break;
-            case WARN:
-                build.setResult(Result.UNSTABLE);
-                break;
-            case PASS:
-                build.setResult(Result.SUCCESS);
-                break;
-            default:
-                build.setResult(Result.UNSTABLE);
-                log("[Beaker] INFO: Unknow job result, setting build result to UNSTABLE");
-                break;
+
+        // Beaker <---> Jenkins result mapping
+        // TODO check, if this is correct
+        switch (result) {
+        case FAIL:
+            build.setResult(Result.FAILURE);
+            break;
+        case PANIC:
+            build.setResult(Result.FAILURE);
+            break;
+        case WARN:
+            build.setResult(Result.UNSTABLE);
+            break;
+        case PASS:
+            build.setResult(Result.SUCCESS);
+            break;
+        default:
+            build.setResult(Result.UNSTABLE);
+            log("[Beaker] INFO: Unknow job result, setting build result to UNSTABLE");
+            break;
         }
-            
+
     }
-    
+
+    /**
+     * Logs messages into Jenkins console.
+     * 
+     * @param message
+     *            Message to be logges
+     */
     private void log(String message) {
         console.logAnnot(message);
     }
@@ -217,12 +264,28 @@ public class BeakerBuilder extends Builder {
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
+        /**
+         * Beaker server URL
+         */
         private String beakerURL;
+
+        // TODO provide a way to store the credential in Jenkisn authentication center.
+        /**
+         * Beaker login
+         */
         private String login;
+
+        /**
+         * Beaker password
+         */
         private String password;
 
         private transient final BeakerClient beakerClient;
 
+        /**
+         * Constructor creates Beaker client for communication with Beaker server and does the authentication so that we
+         * have valid (authenticated) session for futher requests.
+         */
         public DescriptorImpl() {
             load();
             beakerClient = BeakerServer.getXmlRpcClient(beakerURL);
@@ -240,12 +303,20 @@ public class BeakerBuilder extends Builder {
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
             req.bindJSON(this, formData);
-            if(beakerURL.endsWith("/"))
-                beakerURL = beakerURL.substring(0, beakerURL.length()-1);
+            if (beakerURL.endsWith("/"))
+                beakerURL = beakerURL.substring(0, beakerURL.length() - 1);
             save();
             return super.configure(req, formData);
         }
 
+        /**
+         * Tries to connect to Beaker server and verify that provided credential works.
+         * 
+         * @param beakerURL
+         * @param login
+         * @param password
+         * @return
+         */
         public FormValidation doTestConnection(@QueryParameter("beakerURL") final String beakerURL,
                 @QueryParameter("login") final String login, @QueryParameter("password") final String password) {
             System.out.println("Trying to get client for " + beakerURL);
