@@ -31,14 +31,6 @@ public abstract class JobSource implements Describable<JobSource> {
     }
 
     /**
-     * Path to the job file which will be scheduled on Beaker. Default doesn't mean that it returns path where these
-     * file are by default, but it's default path of job, which should be scheduled.
-     * 
-     * @return Path to the job file which will be scheduled on Beaker.
-     */
-    //public abstract String getDefaultJobPath();
-
-    /**
      * Creates temporal file with job XML
      * 
      * @param build

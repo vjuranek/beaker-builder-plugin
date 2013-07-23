@@ -21,7 +21,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class FileJobSource extends JobSource {
 
     private String jobPath;
-    //private File tmpJobFile;
 
     @DataBoundConstructor
     public FileJobSource(String jobName, String jobPath) {
@@ -35,15 +34,6 @@ public class FileJobSource extends JobSource {
     public String getJobPath() {
         return jobPath;
     }
-
-    /**
-     * {@inheritDoc}
-     */
-    /*public String getDefaultJobPath() {
-        if (tmpJobFile != null)
-            return tmpJobFile.getPath();
-        return jobPath;
-    }*/
 
     /**
      * Reads job XML from file and expands variable by calling

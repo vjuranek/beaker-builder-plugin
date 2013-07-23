@@ -75,8 +75,6 @@ public class BeakerBuilder extends Builder {
         if (job == null)
             return false;
 
-        // TODO cleanup before leave - delete temp job XML file
-        
         // wait for job completion
         if (!waitForJobCompletion(job, console))
             return false;
@@ -146,6 +144,7 @@ public class BeakerBuilder extends Builder {
      * @return True if job scheduling is successful.
      */
     private BeakerJob scheduleJob(File jobFile, AbstractBuild<?, ?> build, ConsoleLogger console) {
+        //TODO split into more smaller methods
         BeakerJob job = null;
         String jobXml = null;
         try {

@@ -21,7 +21,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class StringJobSource extends JobSource {
     
     private final String jobContent;
-    //private transient File tmpJobFile;
     
     @DataBoundConstructor
     public StringJobSource(String jobName, String jobContent){
@@ -42,13 +41,6 @@ public class StringJobSource extends JobSource {
         return new File(path.getRemote());
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    /*public String getDefaultJobPath(){
-        return tmpJobFile.getPath();
-    }*/
-    
     public DescriptorImpl getDescriptor(){
         return (DescriptorImpl)Jenkins.getInstance().getDescriptor(getClass());
     }
