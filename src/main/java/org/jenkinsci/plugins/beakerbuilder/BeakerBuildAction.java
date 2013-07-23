@@ -29,5 +29,9 @@ public class BeakerBuildAction implements Action {
     public String getUrlName() {
         return beakerURL + "/jobs/" + jobNumber;
     }
+    
+    public int getJobNumber() {
+        return jobNumber;
+    }
 
 }
