@@ -21,7 +21,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class StringJobSource extends JobSource {
     
     private final String jobContent;
-    private transient File tmpJobFile;
+    //private transient File tmpJobFile;
     
     @DataBoundConstructor
     public StringJobSource(String jobName, String jobContent){
@@ -37,17 +37,17 @@ public class StringJobSource extends JobSource {
      * {@inheritDoc}
      */
     @Override
-    public void createJobFile(AbstractBuild<?,?> build, BuildListener listener) throws InterruptedException, IOException {
+    public File createJobFile(AbstractBuild<?,?> build, BuildListener listener) throws InterruptedException, IOException {
         FilePath path = createDefaultJobFile(jobContent, build, listener);
-        tmpJobFile = new File(path.getRemote());
+        return new File(path.getRemote());
     }
 
     /**
      * {@inheritDoc}
      */
-    public String getDefaultJobPath(){
+    /*public String getDefaultJobPath(){
         return tmpJobFile.getPath();
-    }
+    }*/
     
     public DescriptorImpl getDescriptor(){
         return (DescriptorImpl)Jenkins.getInstance().getDescriptor(getClass());

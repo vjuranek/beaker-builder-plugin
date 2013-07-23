@@ -8,6 +8,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.Descriptor;
 import hudson.model.ParametersAction;
 
+import java.io.File;
 import java.io.IOException;
 
 import jenkins.model.Jenkins;
@@ -35,7 +36,7 @@ public abstract class JobSource implements Describable<JobSource> {
      * 
      * @return Path to the job file which will be scheduled on Beaker.
      */
-    public abstract String getDefaultJobPath();
+    //public abstract String getDefaultJobPath();
 
     /**
      * Creates temporal file with job XML
@@ -45,7 +46,7 @@ public abstract class JobSource implements Describable<JobSource> {
      * @throws InterruptedException
      * @throws IOException
      */
-    public abstract void createJobFile(AbstractBuild<?, ?> build, BuildListener listener) throws InterruptedException,
+    public abstract File createJobFile(AbstractBuild<?, ?> build, BuildListener listener) throws InterruptedException,
             IOException;
 
     /**

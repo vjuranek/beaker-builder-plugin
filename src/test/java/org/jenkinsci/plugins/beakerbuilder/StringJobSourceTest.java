@@ -11,6 +11,7 @@ import hudson.model.ParametersDefinitionProperty;
 import hudson.model.StringParameterDefinition;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -39,8 +40,8 @@ public class StringJobSourceTest {
         jobPath.write(jobParamXML, Charset.defaultCharset().name());
 
         FileJobSource job = new FileJobSource("testJob", jobPath.getRemote());
-        job.createJobFile(build, new StreamBuildListener(System.out, Charset.defaultCharset()));
-        BufferedReader br = new BufferedReader(new FileReader(job.getDefaultJobPath()));
+        File jobFile = job.createJobFile(build, new StreamBuildListener(System.out, Charset.defaultCharset()));
+        BufferedReader br = new BufferedReader(new FileReader(jobFile.getPath()));
         String actualJob = br.readLine();
         br.close();
         assertEquals(

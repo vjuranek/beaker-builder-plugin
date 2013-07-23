@@ -21,7 +21,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class FileJobSource extends JobSource {
 
     private String jobPath;
-    private File tmpJobFile;
+    //private File tmpJobFile;
 
     @DataBoundConstructor
     public FileJobSource(String jobName, String jobPath) {
@@ -39,11 +39,11 @@ public class FileJobSource extends JobSource {
     /**
      * {@inheritDoc}
      */
-    public String getDefaultJobPath() {
+    /*public String getDefaultJobPath() {
         if (tmpJobFile != null)
             return tmpJobFile.getPath();
         return jobPath;
-    }
+    }*/
 
     /**
      * Reads job XML from file and expands variable by calling
@@ -51,7 +51,7 @@ public class FileJobSource extends JobSource {
      * assumes that file path is relative to workspace directory (i.e. file is within workspace).
      */
     @Override
-    public void createJobFile(AbstractBuild<?, ?> build, BuildListener listener) throws InterruptedException,
+    public File createJobFile(AbstractBuild<?, ?> build, BuildListener listener) throws InterruptedException,
             IOException {
         // TODO check, if file really exists
         // TODO check, is path is really relative to WS root
@@ -59,7 +59,7 @@ public class FileJobSource extends JobSource {
         // TODO not very safe, if e.g. some malicious user provide path to a huge file                  
         String jobContent = fp.readToString(); 
         FilePath path = createDefaultJobFile(jobContent, build, listener);
-        tmpJobFile = new File(path.getRemote());
+        return new File(path.getRemote());
     }
 
     public DescriptorImpl getDescriptor() {
