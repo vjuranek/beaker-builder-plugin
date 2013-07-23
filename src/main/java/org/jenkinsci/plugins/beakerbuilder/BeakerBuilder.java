@@ -314,7 +314,8 @@ public class BeakerBuilder extends Builder {
             }
         }
 
-        public boolean isApplicable(Class<? extends AbstractProject> aClass) {
+        @Override
+        public boolean isApplicable(@SuppressWarnings("rawtypes")Class<? extends AbstractProject> aClass) {
             return true;
         }
 
