@@ -10,8 +10,9 @@ import hudson.model.TaskListener;
 
 @Extension
 public class BeakerEnvContributor extends EnvironmentContributor {
-    
-    public void buildEnvironmentFor(Run r, EnvVars envs, TaskListener listener) throws IOException, InterruptedException {
+
+    @Override
+    public void buildEnvironmentFor(@SuppressWarnings("rawtypes") Run r, EnvVars envs, TaskListener listener) throws IOException, InterruptedException {
         BeakerBuildAction bba = r.getAction(BeakerBuildAction.class);
         if(bba != null)
             try {
