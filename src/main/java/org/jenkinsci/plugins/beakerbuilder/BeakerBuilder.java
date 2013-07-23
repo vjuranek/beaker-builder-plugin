@@ -208,7 +208,7 @@ public class BeakerBuilder extends Builder {
                     log(console, "[Beaker] INFO: Job aborted");
                     return false;
                 }
-                log(console, "[Beaker] INFO: Job has changes state from " + watchdog.getOldStatus() + " state to state "
+                log(console, "[Beaker] INFO: Job has changed state from " + watchdog.getOldStatus() + " state to state "
                         + watchdog.getStatus());
             }
         }
