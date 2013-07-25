@@ -65,16 +65,32 @@ public class BeakerBuilder extends Builder {
 
         // prepare job XML file
         File jobFile = prepareJob(build, console);
-        if (jobFile == null)
+        if (!verifyFile(jobFile, build, console))
             return false;
-
         // TODO cleanup before leave - delete temp job XML file
+        
+        log(console, "[Beaker] INFO: Job XML file prepared");
+        String jobXml = readJobFile(jobFile, build);
+        if (jobXml == null) {
+            log(console, "[Beaker] ERROR: Cannot read job source file " + jobFile.getPath());
+            return false;
+        }
 
         // schedule job
-        BeakerJob job = scheduleJob(jobFile, build, console); 
-        if (job == null)
+        LOGGER.fine("Scheduling Beaker job from file " + jobFile.getPath());
+        BeakerJob job = scheduleJob(jobXml, build, console); 
+        if (job == null) {
+            log(console, "[Beaker] ERROR: Something went wrong when submitting job to Beaker, got NULL from Beaker, see console and Jenkins log for details");
             return false;
-
+        }
+        //TODO cancel job in Beaker if running before leaving
+        
+        // job exists in Beaker, we can create an action pointing to it
+        int jobNum = getJobNumber(job);
+        BeakerBuildAction bba = new BeakerBuildAction(jobNum, getDescriptor().getBeakerURL());
+        build.addAction(bba);
+        log(console, "[Beaker] INFO: Job successfuly submitted to Beaker, job ID is " + job.getJobId());
+        
         // wait for job completion
         if (!waitForJobCompletion(job, console))
             return false;
@@ -102,25 +118,19 @@ public class BeakerBuilder extends Builder {
             log(console, "[Beaker] ERROR: Could not get canonical path to workspace:" + ioe);
             ioe.printStackTrace();
             build.setResult(Result.FAILURE);
-            return jobFile;
         }
-
-        // verify that file really exists in workspace
-        if(!verifyFile(jobFile, build, console)) {
-            log(console, "[Beaker] ERROR: Failed to verify that job XML exists");
-            return jobFile;
-        }
-            
-        log(console, "[Beaker] INFO: Job XML file prepared");
         return jobFile;
     }
     
     private boolean verifyFile(File jobFile, AbstractBuild<?, ?> build, ConsoleLogger console) {
+        if(jobFile == null)
+            return false;
+        
         FilePath fp = new FilePath(build.getWorkspace(), jobFile.getPath());
         try {
             if (!fp.exists()) {
                 log(console, "[Beaker] ERROR: Job file " + fp.getName() + " doesn't exists on channel" + fp.getChannel() + "!");
-                build.setResult(Result.FAILURE);
+                //build.setResult(Result.FAILURE);
                 return false;
             }
         } catch (IOException e) {
@@ -129,23 +139,18 @@ public class BeakerBuilder extends Builder {
             LOGGER.log(Level.INFO,
                     "Beaker error: failed to verify that " + fp.getName() + " exists on channel" + fp.getChannel()
                             + "!", e);
-            build.setResult(Result.FAILURE);
+            //build.setResult(Result.FAILURE);
             return false;
         } catch(InterruptedException e) {
             //TODO log exception
         }
+        
+        //TODO verify it's valid XML file
+        
         return true;
     }
-
-    /**
-     * Schedules job on Beaker server. If scheduling is successful, add {@link BeakerBuildAction} to the job.
-     * 
-     * @param build
-     * @return True if job scheduling is successful.
-     */
-    private BeakerJob scheduleJob(File jobFile, AbstractBuild<?, ?> build, ConsoleLogger console) {
-        //TODO split into more smaller methods
-        BeakerJob job = null;
+    
+    private String readJobFile(File jobFile, AbstractBuild<?, ?> build) {
         String jobXml = null;
         try {
             FilePath fp = new FilePath(build.getWorkspace(), jobFile.getPath());
@@ -155,37 +160,34 @@ public class BeakerBuilder extends Builder {
             LOGGER.log(Level.INFO, "Beaker error: failed to read Beaker job XML file "
                     + jobFile.getPath(), e);
         }
+        return jobXml;
+    }
 
-        if (jobXml == null) {
-            log(console, "[Beaker] ERROR: Cannot read job source file " + jobFile.getPath());
-            return job;
-        }
-
-        LOGGER.fine("Scheduling Beaker job from file " + jobFile.getPath());
+    /**
+     * Schedules job on Beaker server. If scheduling is successful, add {@link BeakerBuildAction} to the job.
+     * 
+     * @param build
+     * @return True if job scheduling is successful.
+     */
+    private BeakerJob scheduleJob(String jobXml, AbstractBuild<?, ?> build, ConsoleLogger console) {
         LOGGER.fine("Job XML is: \n" + jobXml);
+        BeakerJob job = null;
         try {
             job = getDescriptor().getBeakerClient().scheduleJob(jobXml);
         } catch(XmlRpcException e) {
             log(console, "[Beaker] ERROR: Job scheduling has failed, reason: " + e.getMessage());
         }
-
-        if (job == null) {
-            log(console, "[Beaker] ERROR: Something went wrong when submitting job to Beaker, got NULL from Beaker, see console and Jenkins log for details");
-            return job;
-        }
-
-        // job exists in Beaker, we can create an action pointing to it
+        return job;
+    }
+    
+    private int getJobNumber(BeakerJob job) {
         Integer jobNum = new Integer(0);
         try {
             jobNum = new Integer(job.getJobId().substring(2, job.getJobId().length()));
         } catch (NumberFormatException e) {
             LOGGER.log(Level.INFO, "Beaker error: cannot convert job ID " + job.getJobId() + " to int");
         }
-        BeakerBuildAction bba = new BeakerBuildAction(jobNum.intValue(), getDescriptor().getBeakerURL());
-        build.addAction(bba);
-
-        log(console, "[Beaker] INFO: Job successfuly submitted to Beaker, job ID is " + job.getJobId());
-        return job;
+        return jobNum.intValue();
     }
 
     /**
