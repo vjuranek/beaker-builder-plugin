@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.509.1</version><!-- which version of Jenkins is this plugin built against? -->
+        <version>1.509.1</version>
     </parent>
 
     <groupId>org.jenkins-ci.plugins</groupId>
@@ -14,9 +14,10 @@
 
     <dependencies>
         <dependency>
+            <!-- Not officially hosted anywhere, sources are on https://github.com/vjuranek/beaker4j -->
             <groupId>org.fedorahosted.beaker4j</groupId>
             <artifactId>beaker4j</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>0.0.1</version>
         </dependency>
     </dependencies>
 
