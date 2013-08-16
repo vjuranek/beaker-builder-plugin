@@ -173,6 +173,8 @@ public class BeakerBuilder extends Builder {
         LOGGER.fine("Job XML is: \n" + jobXml);
         BeakerJob job = null;
         try {
+            //client credentials can expire after some time, renew them before scheduling of each build
+            getDescriptor().getIdentity().authenticate();
             job = getDescriptor().getBeakerClient().scheduleJob(jobXml);
         } catch(XmlRpcException e) {
             log(console, "[Beaker] ERROR: Job scheduling has failed, reason: " + e.getMessage());
@@ -300,6 +302,7 @@ public class BeakerBuilder extends Builder {
         private String password;
 
         private transient final BeakerClient beakerClient;
+        private transient final Identity identity;
 
         /**
          * Constructor creates Beaker client for communication with Beaker server and does the authentication so that we
@@ -309,9 +312,12 @@ public class BeakerBuilder extends Builder {
             load();
             if (beakerURL != null && !"".equals(beakerURL.trim())) {
                 beakerClient = BeakerServer.getXmlRpcClient(beakerURL);
-                beakerClient.authenticate(login, password);
+                //beakerClient.authenticate(login, password);
+                identity = new Identity(login, password, beakerClient);
+                identity.authenticate();
             } else {
                 beakerClient = null;
+                identity = null;
             }
         }
 
@@ -357,7 +363,7 @@ public class BeakerBuilder extends Builder {
                         + e.getCause());
             }
         }
-
+        
         public String getBeakerURL() {
             return beakerURL;
         }
@@ -384,6 +390,10 @@ public class BeakerBuilder extends Builder {
 
         public BeakerClient getBeakerClient() {
             return beakerClient;
+        }
+        
+        public Identity getIdentity() {
+            return identity;
         }
 
     }
