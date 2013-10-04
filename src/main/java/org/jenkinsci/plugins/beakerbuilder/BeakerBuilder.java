@@ -301,8 +301,8 @@ public class BeakerBuilder extends Builder {
          */
         private String password;
 
-        private transient final BeakerClient beakerClient;
-        private transient final Identity identity;
+        private transient BeakerClient beakerClient;
+        private transient Identity identity;
 
         /**
          * Constructor creates Beaker client for communication with Beaker server and does the authentication so that we
@@ -310,15 +310,7 @@ public class BeakerBuilder extends Builder {
          */
         public DescriptorImpl() {
             load();
-            if (beakerURL != null && !"".equals(beakerURL.trim())) {
-                beakerClient = BeakerServer.getXmlRpcClient(beakerURL);
-                //beakerClient.authenticate(login, password);
-                identity = new Identity(login, password, beakerClient);
-                identity.authenticate();
-            } else {
-                beakerClient = null;
-                identity = null;
-            }
+            setupClient(); 
         }
 
         @Override
@@ -335,10 +327,20 @@ public class BeakerBuilder extends Builder {
             req.bindJSON(this, formData);
             if (beakerURL.endsWith("/"))
                 beakerURL = beakerURL.substring(0, beakerURL.length() - 1);
+            setupClient();
             save();
             return super.configure(req, formData);
         }
 
+        private void setupClient() {
+            if (beakerURL != null && !"".equals(beakerURL.trim())) {
+                beakerClient = BeakerServer.getXmlRpcClient(beakerURL);
+                //beakerClient.authenticate(login, password);
+                identity = new Identity(login, password, beakerClient);
+                identity.authenticate();
+            }
+        }
+        
         /**
          * Tries to connect to Beaker server and verify that provided credential works.
          * 
