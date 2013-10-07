@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.beakerbuilder;
 
 import static org.junit.Assert.assertEquals;
 import hudson.FilePath;
+import hudson.model.BuildListener;
 import hudson.model.FreeStyleBuild;
 import hudson.model.StreamBuildListener;
 import hudson.model.BooleanParameterDefinition;
@@ -47,5 +48,22 @@ public class FileJobSourceTest {
         assertEquals(
                 "<test>Build #1: My test job with string param of with value My test string parameter and boolean param with value true</test>",
                 actualJob);
+    }
+    
+    @Test
+    public void expandJobPathEnvAndParams() throws IOException, ExecutionException, InterruptedException {
+        FreeStyleProject project = j.createFreeStyleProject();
+        ParameterDefinition stringParDef = new StringParameterDefinition("TestParam", "test_param", "Test str");
+        project.addProperty(new ParametersDefinitionProperty(stringParDef));   
+        FreeStyleBuild build = project.scheduleBuild2(0).get();
+        
+        BuildListener listener = new StreamBuildListener(System.out, Charset.defaultCharset());
+        String buildNumber = build.getEnvironment(listener).get("BUILD_NUMBER");
+        String expectedFileName = "test_param_" + buildNumber;
+        
+        FileJobSource job = new FileJobSource("testJob", "${TestParam}_${BUILD_NUMBER}");
+        String expandedFileName = job.expandJobPath(build, listener);
+        
+        assertEquals(expectedFileName, expandedFileName);
     }
 }
