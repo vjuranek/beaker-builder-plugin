@@ -13,6 +13,9 @@ import hudson.util.FormValidation;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -45,14 +48,21 @@ public class BeakerBuilder extends Builder {
      * Beaker job XML
      */
     private final JobSource jobSource;
+    private final boolean downloadFiles;
 
     @DataBoundConstructor
-    public BeakerBuilder(JobSource jobSource) {
+    public BeakerBuilder(JobSource jobSource, boolean downloadFiles) {
         this.jobSource = jobSource;
+        this.downloadFiles = downloadFiles;
+        System.out.println("download is " + downloadFiles);
     }
 
     public JobSource getJobSource() {
         return jobSource;
+    }
+    
+    public boolean getDownloadFiles() {
+        return downloadFiles;
     }
 
     /**
@@ -97,6 +107,10 @@ public class BeakerBuilder extends Builder {
 
         // set build result according to Beaker result
         setBuildResult(job, build, console);
+        
+        //try to download job files into workspace
+        if(downloadFiles)
+            downloadJobFiles(job, build, console);
 
         return true;
     }
@@ -267,6 +281,41 @@ public class BeakerBuilder extends Builder {
 
     }
 
+    private void downloadJobFiles(BeakerJob job, AbstractBuild<?, ?> build, ConsoleLogger console) {
+        FilePath beakerFileDir = new FilePath(build.getWorkspace(),"beaker/" + job.getJobId().replaceAll(":", "_"));
+        try {
+            beakerFileDir.mkdirs();
+        } catch(IOException e) {
+            LOGGER.log(Level.INFO, "Beaker error: cannot create dir for Beaker files", e);
+            log(console, "[Beaker] ERROR: Cannot create dir for Beaker files: " + e.getMessage());
+        } catch(InterruptedException e) {
+            LOGGER.log(Level.INFO, "Beaker error: creating dir for Beaker files interrupted", e);
+            log(console, "[Beaker] ERROR: Creating dir for Beaker files interrupted: " + e.getMessage());
+        }
+        
+        log(console, "[Beaker] INFO: Trying to download job file into " + beakerFileDir.getRemote());
+        try {
+            ArrayList<Map<String, String>> files = job.getFiles();
+            for(Map<String, String> f : files) {
+               FilePath fp = new FilePath(beakerFileDir, f.get("filename"));
+               log(console, "[Beaker] INFO: Downloading " + f.get("filename") + " into " + fp.getRemote());
+               try {
+                   fp.copyFrom(new URL(f.get("url")));
+               } catch(IOException e) {
+                   log(console, "[Beaker] ERROR: Something went wronf when downloading " + f.get("filename") + ", check Jenkins log for details.");
+                   LOGGER.log(Level.INFO, "Beaker error: cannot donwload file " + f.get("filename"), e);
+               } catch(InterruptedException e) {
+                   log(console, "[Beaker] ERROR: Something went wronf when downloading " + f.get("filename") + ", check Jenkins log for details.");
+                   LOGGER.log(Level.INFO, "Beaker error: cannot donwload file " + f.get("filename"), e);
+               }   
+            }
+        } catch(XmlRpcException e) {
+            LOGGER.log(Level.INFO, "Beaker error: cannot download files from Beaker ", e);
+            log(console, "[Beaker] ERROR: Cannot download job files from Beaker: " + e.getMessage()); 
+        }
+        
+    }
+    
     /**
      * Logs messages into Jenkins console.
      * 
