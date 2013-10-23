@@ -31,7 +31,7 @@
             <!-- Not officially hosted anywhere, sources are on https://github.com/vjuranek/beaker4j -->
             <groupId>org.fedorahosted.beaker4j</groupId>
             <artifactId>beaker4j</artifactId>
-            <version>0.0.3</version>
+            <version>0.0.4</version>
         </dependency>
     </dependencies>
 
