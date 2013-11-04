@@ -302,10 +302,10 @@ public class BeakerBuilder extends Builder {
                try {
                    fp.copyFrom(new URL(f.get("url")));
                } catch(IOException e) {
-                   log(console, "[Beaker] ERROR: Something went wronf when downloading " + f.get("filename") + ", check Jenkins log for details.");
+                   log(console, "[Beaker] ERROR: Something went wrong when downloading " + f.get("filename") + ", check Jenkins log for details.");
                    LOGGER.log(Level.INFO, "Beaker error: cannot donwload file " + f.get("filename"), e);
                } catch(InterruptedException e) {
-                   log(console, "[Beaker] ERROR: Something went wronf when downloading " + f.get("filename") + ", check Jenkins log for details.");
+                   log(console, "[Beaker] ERROR: Something went wrong when downloading " + f.get("filename") + ", check Jenkins log for details.");
                    LOGGER.log(Level.INFO, "Beaker error: cannot donwload file " + f.get("filename"), e);
                }   
             }
