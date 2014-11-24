@@ -29,7 +29,7 @@ public class StringJobSourceTest {
     @Test
     public void expandBuildParams() throws IOException, ExecutionException, InterruptedException {
         FreeStyleProject project = j.createFreeStyleProject();
-        ParameterDefinition stringParDef = new StringParameterDefinition("TestStringParam", "My test string parameter",
+        ParameterDefinition stringParDef = new StringParameterDefinition("TestStringParam", "My test string parameter < >",
                 "String description");
         ParameterDefinition boolParDef = new BooleanParameterDefinition("TestBooleanParam", true, "Bool description");
         project.addProperty(new ParametersDefinitionProperty(stringParDef, boolParDef));   
@@ -45,7 +45,7 @@ public class StringJobSourceTest {
         String actualJob = br.readLine();
         br.close();
         assertEquals(
-                "<test>Build #1: My test job with string param of with value My test string parameter and boolean param with value true</test>",
+                "<test>Build #1: My test job with string param of with value My test string parameter &lt; &gt; and boolean param with value true</test>",
                 actualJob);
     }
     

@@ -2,11 +2,13 @@ package org.jenkinsci.plugins.beakerbuilder;
 
 import hudson.DescriptorExtensionList;
 import hudson.FilePath;
+import hudson.Util;
 import hudson.model.BuildListener;
 import hudson.model.Describable;
 import hudson.model.AbstractBuild;
 import hudson.model.Descriptor;
 import hudson.model.ParametersAction;
+import hudson.util.VariableResolver;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,13 +59,10 @@ public abstract class JobSource implements Describable<JobSource> {
      */
     public FilePath createDefaultJobFile(String jobContent, AbstractBuild<?, ?> build, BuildListener listener)
             throws InterruptedException, IOException {
-        String job = jobContent;
-        ParametersAction pa = build.getAction(ParametersAction.class);
-        // expand build parameters
-        if (pa != null)
-            job = pa.substitute(build, job);
         // expand environment variables
-        jobContent = build.getEnvironment(listener).expand(jobContent);
+        VariableResolver<String> variableResolver = new XMLEscapingVariableResolver(
+                new VariableResolver.ByMap<String>(build.getEnvironment(listener)));
+        jobContent = Util.replaceMacro(jobContent, variableResolver);
         FilePath path = build.getWorkspace().createTextTempFile(DEFAULT_JOB_PREFIX, DEFAULT_JOB_SUFFIX, jobContent,
                 true);
         return path;
