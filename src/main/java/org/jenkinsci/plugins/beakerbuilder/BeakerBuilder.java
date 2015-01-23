@@ -54,7 +54,7 @@ public class BeakerBuilder extends Builder {
     public BeakerBuilder(JobSource jobSource, boolean downloadFiles) {
         this.jobSource = jobSource;
         this.downloadFiles = downloadFiles;
-        System.out.println("download is " + downloadFiles);
+        LOGGER.fine("download is " + downloadFiles);
     }
 
     public JobSource getJobSource() {
@@ -88,7 +88,7 @@ public class BeakerBuilder extends Builder {
 
         // schedule job
         LOGGER.fine("Scheduling Beaker job from file " + jobFile.getPath());
-        BeakerJob job = scheduleJob(jobXml, build, console); 
+        BeakerJob job = scheduleJob(jobXml, build, console);
         if (job == null) {
             log(console, "[Beaker] ERROR: Something went wrong when submitting job to Beaker, got NULL from Beaker, see console and Jenkins log for details");
             return false;
@@ -158,7 +158,7 @@ public class BeakerBuilder extends Builder {
         } catch(InterruptedException e) {
             //TODO log exception
         }
-        
+
         //TODO verify it's valid XML file
         
         return true;
@@ -169,7 +169,7 @@ public class BeakerBuilder extends Builder {
         try {
             FilePath fp = new FilePath(build.getWorkspace(), jobFile.getPath());
             jobXml = fp.readToString();
-            System.out.println("job XML: " + jobXml);
+            LOGGER.fine("job XML: " + jobXml);
         } catch (IOException e) {
             LOGGER.log(Level.INFO, "Beaker error: failed to read Beaker job XML file "
                     + jobFile.getPath(), e);
@@ -311,7 +311,7 @@ public class BeakerBuilder extends Builder {
             }
         } catch(XmlRpcException e) {
             LOGGER.log(Level.INFO, "Beaker error: cannot download files from Beaker ", e);
-            log(console, "[Beaker] ERROR: Cannot download job files from Beaker: " + e.getMessage()); 
+            log(console, "[Beaker] ERROR: Cannot download job files from Beaker: " + e.getMessage());
         }
         
     }
@@ -367,6 +367,7 @@ public class BeakerBuilder extends Builder {
             return true;
         }
 
+        @Override
         public String getDisplayName() {
             return "Execute Beaker task";
         }
@@ -400,7 +401,7 @@ public class BeakerBuilder extends Builder {
          */
         public FormValidation doTestConnection(@QueryParameter("beakerURL") final String beakerURL,
                 @QueryParameter("login") final String login, @QueryParameter("password") final String password) {
-            System.out.println("Trying to get client for " + beakerURL);
+            LOGGER.fine("Trying to get client for " + beakerURL);
             BeakerClient bc = BeakerServer.getXmlRpcClient(beakerURL);
             Identity ident = new Identity(login, password, bc);
             try {
