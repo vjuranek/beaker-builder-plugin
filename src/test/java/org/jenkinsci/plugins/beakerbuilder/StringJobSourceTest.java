@@ -18,6 +18,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public class StringJobSourceTest {
@@ -46,7 +47,7 @@ public class StringJobSourceTest {
                 actualJob);
     }
 
-    // https://issues.jenkins-ci.org/browse/JENKINS-27003
+    @Bug(27003)
     @Test
     public void handlesUndefinedVariableSubstitutions()
             throws IOException, InterruptedException, ExecutionException {
