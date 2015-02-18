@@ -12,6 +12,9 @@ public class XMLEscapingVariableResolver implements VariableResolver<String> {
 
     public String resolve(String name) {
         String value = inner.resolve(name);
+        if (value == null) {
+            return null;
+        }
         return value
             .replaceAll("&", "&amp;")
             .replaceAll(">", "&gt;")

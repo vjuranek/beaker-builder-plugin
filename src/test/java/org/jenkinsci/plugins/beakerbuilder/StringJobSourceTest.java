@@ -1,7 +1,6 @@
 package org.jenkinsci.plugins.beakerbuilder;
 
 import static org.junit.Assert.assertEquals;
-import hudson.FilePath;
 import hudson.model.FreeStyleBuild;
 import hudson.model.StreamBuildListener;
 import hudson.model.BooleanParameterDefinition;
@@ -35,11 +34,9 @@ public class StringJobSourceTest {
         project.addProperty(new ParametersDefinitionProperty(stringParDef, boolParDef));   
         FreeStyleBuild build = project.scheduleBuild2(0).get();
         
-        FilePath jobPath = build.getWorkspace().createTempFile("beaker_test1", "xml");
         String jobParamXML = "<test>Build #${BUILD_NUMBER}: My test job with string param of with value ${TestStringParam} and boolean param with value ${TestBooleanParam}</test>";
-        jobPath.write(jobParamXML, Charset.defaultCharset().name());
 
-        FileJobSource job = new FileJobSource("testJob", jobPath.getRemote());
+        JobSource job = new StringJobSource("testJob", jobParamXML);
         File jobFile = job.createJobFile(build, new StreamBuildListener(System.out, Charset.defaultCharset()));
         BufferedReader br = new BufferedReader(new FileReader(jobFile.getPath()));
         String actualJob = br.readLine();
@@ -48,5 +45,23 @@ public class StringJobSourceTest {
                 "<test>Build #1: My test job with string param of with value My test string parameter &lt; &gt; and boolean param with value true</test>",
                 actualJob);
     }
-    
+
+    // https://issues.jenkins-ci.org/browse/JENKINS-27003
+    @Test
+    public void handlesUndefinedVariableSubstitutions()
+            throws IOException, InterruptedException, ExecutionException {
+        FreeStyleProject project = j.createFreeStyleProject();
+        FreeStyleBuild build = project.scheduleBuild2(0).get();
+
+        String jobParamXML = "<job>${SOMETHING_UNDEFINED}</job>";
+
+        JobSource job = new StringJobSource("testJob", jobParamXML);
+        File jobFile = job.createJobFile(build, new StreamBuildListener(
+                System.out, Charset.defaultCharset()));
+        BufferedReader br = new BufferedReader(new FileReader(jobFile.getPath()));
+        String actualJob = br.readLine();
+        br.close();
+        assertEquals("<job>${SOMETHING_UNDEFINED}</job>", actualJob);
+    }
+
 }
