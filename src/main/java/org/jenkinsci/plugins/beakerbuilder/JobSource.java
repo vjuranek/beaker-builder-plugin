@@ -7,7 +7,6 @@ import hudson.model.BuildListener;
 import hudson.model.Describable;
 import hudson.model.AbstractBuild;
 import hudson.model.Descriptor;
-import hudson.model.ParametersAction;
 import hudson.util.VariableResolver;
 
 import java.io.File;
@@ -25,12 +24,6 @@ public abstract class JobSource implements Describable<JobSource> {
 
     protected static final String DEFAULT_JOB_PREFIX = "beakerJob";
     protected static final String DEFAULT_JOB_SUFFIX = ".xml";
-
-    protected String jobName;
-
-    public String getJobName() {
-        return jobName;
-    }
 
     /**
      * Creates temporal file with job XML

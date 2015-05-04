@@ -25,8 +25,7 @@ public class FileJobSource extends JobSource {
     private String jobPath;
 
     @DataBoundConstructor
-    public FileJobSource(String jobName, String jobPath) {
-        this.jobName = jobName;
+    public FileJobSource(String jobPath) {
         this.jobPath = jobPath;
     }
 

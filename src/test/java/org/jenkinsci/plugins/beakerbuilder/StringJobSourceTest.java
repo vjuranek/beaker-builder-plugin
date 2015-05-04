@@ -37,7 +37,7 @@ public class StringJobSourceTest {
         
         String jobParamXML = "<test>Build #${BUILD_NUMBER}: My test job with string param of with value ${TestStringParam} and boolean param with value ${TestBooleanParam}</test>";
 
-        JobSource job = new StringJobSource("testJob", jobParamXML);
+        JobSource job = new StringJobSource(jobParamXML);
         File jobFile = job.createJobFile(build, new StreamBuildListener(System.out, Charset.defaultCharset()));
         BufferedReader br = new BufferedReader(new FileReader(jobFile.getPath()));
         String actualJob = br.readLine();
@@ -56,7 +56,7 @@ public class StringJobSourceTest {
 
         String jobParamXML = "<job>${SOMETHING_UNDEFINED}</job>";
 
-        JobSource job = new StringJobSource("testJob", jobParamXML);
+        JobSource job = new StringJobSource(jobParamXML);
         File jobFile = job.createJobFile(build, new StreamBuildListener(
                 System.out, Charset.defaultCharset()));
         BufferedReader br = new BufferedReader(new FileReader(jobFile.getPath()));

@@ -23,8 +23,7 @@ public class StringJobSource extends JobSource {
     private final String jobContent;
     
     @DataBoundConstructor
-    public StringJobSource(String jobName, String jobContent){
-        this.jobName = jobName;
+    public StringJobSource(String jobContent){
         this.jobContent = jobContent;
     }
     

@@ -40,7 +40,7 @@ public class FileJobSourceTest {
         String jobParamXML = "<test>Build #${BUILD_NUMBER}: My test job with string param of with value ${TestStringParam} and boolean param with value ${TestBooleanParam}</test>";
         jobPath.write(jobParamXML, Charset.defaultCharset().name());
 
-        FileJobSource job = new FileJobSource("testJob", jobPath.getRemote());
+        FileJobSource job = new FileJobSource(jobPath.getRemote());
         File jobFile = job.createJobFile(build, new StreamBuildListener(System.out, Charset.defaultCharset()));
         BufferedReader br = new BufferedReader(new FileReader(jobFile.getPath()));
         String actualJob = br.readLine();
@@ -61,7 +61,7 @@ public class FileJobSourceTest {
         String buildNumber = build.getEnvironment(listener).get("BUILD_NUMBER");
         String expectedFileName = "test_param_" + buildNumber;
         
-        FileJobSource job = new FileJobSource("testJob", "${TestParam}_${BUILD_NUMBER}");
+        FileJobSource job = new FileJobSource("${TestParam}_${BUILD_NUMBER}");
         String expandedFileName = job.expandJobPath(build, listener);
         
         assertEquals(expectedFileName, expandedFileName);
