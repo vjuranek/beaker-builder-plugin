@@ -3,9 +3,10 @@ package org.jenkinsci.plugins.beakerbuilder;
 import java.util.TimerTask;
 
 import org.apache.xmlrpc.XmlRpcException;
-import org.fedorahosted.beaker4j.remote_model.BeakerTask;
-import org.fedorahosted.beaker4j.remote_model.BeakerTask.TaskInfo;
-import org.fedorahosted.beaker4j.remote_model.TaskStatus;
+
+import com.github.vjuranek.beaker4j.remote_model.BeakerTask;
+import com.github.vjuranek.beaker4j.remote_model.BeakerTask.TaskInfo;
+import com.github.vjuranek.beaker4j.remote_model.TaskStatus;
 
 /**
  * {@link TimerTask} which which wait some time and then checks the task status periodically. It keeps information about

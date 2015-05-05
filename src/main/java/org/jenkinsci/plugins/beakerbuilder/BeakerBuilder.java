@@ -23,17 +23,18 @@ import java.util.logging.Logger;
 import net.sf.json.JSONObject;
 
 import org.apache.xmlrpc.XmlRpcException;
-import org.fedorahosted.beaker4j.beaker.BeakerServer;
-import org.fedorahosted.beaker4j.client.BeakerClient;
-import org.fedorahosted.beaker4j.remote_model.BeakerJob;
-import org.fedorahosted.beaker4j.remote_model.BeakerTask;
-import org.fedorahosted.beaker4j.remote_model.Identity;
-import org.fedorahosted.beaker4j.remote_model.TaskResult;
-import org.fedorahosted.beaker4j.remote_model.TaskStatus;
 import org.jenkinsci.plugins.beakerbuilder.utils.ConsoleLogger;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+
+import com.github.vjuranek.beaker4j.beaker.BeakerServer;
+import com.github.vjuranek.beaker4j.client.BeakerClient;
+import com.github.vjuranek.beaker4j.remote_model.BeakerJob;
+import com.github.vjuranek.beaker4j.remote_model.BeakerTask;
+import com.github.vjuranek.beaker4j.remote_model.Identity;
+import com.github.vjuranek.beaker4j.remote_model.TaskResult;
+import com.github.vjuranek.beaker4j.remote_model.TaskStatus;
 
 /**
  * Builder which provides possibility to schedule external Beaker job, waits for its completion and sets up job result
