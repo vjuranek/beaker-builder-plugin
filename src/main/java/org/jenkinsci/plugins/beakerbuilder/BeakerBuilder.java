@@ -24,6 +24,8 @@ import net.sf.json.JSONObject;
 
 import org.apache.xmlrpc.XmlRpcException;
 import org.jenkinsci.plugins.beakerbuilder.utils.ConsoleLogger;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -339,7 +341,7 @@ public class BeakerBuilder extends Builder {
          */
         private String beakerURL;
 
-        // TODO provide a way to store the credential in Jenkisn authentication center.
+        // TODO provide a way to store the credential in Jenkins authentication center.
         /**
          * Beaker login
          */
@@ -353,13 +355,8 @@ public class BeakerBuilder extends Builder {
         private transient BeakerClient beakerClient;
         private transient Identity identity;
 
-        /**
-         * Constructor creates Beaker client for communication with Beaker server and does the authentication so that we
-         * have valid (authenticated) session for futher requests.
-         */
         public DescriptorImpl() {
             load();
-            setupClient();
         }
 
         @Override
@@ -377,12 +374,34 @@ public class BeakerBuilder extends Builder {
             req.bindJSON(this, formData);
             if (beakerURL.endsWith("/"))
                 beakerURL = beakerURL.substring(0, beakerURL.length() - 1);
-            setupClient();
             save();
+
+            beakerClient = null;
+            identity = null;
+
             return super.configure(req, formData);
         }
 
+        @Restricted(DoNotUse.class) // Databinding
+        public void setBeakerURL(String beakerURL) {
+            this.beakerURL = beakerURL;
+        }
+
+        @Restricted(DoNotUse.class) // Databinding
+        public void setLogin(String login) {
+            this.login = login;
+        }
+
+        @Restricted(DoNotUse.class) // Databinding
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        /**
+         * Establish Beaker connection if there is none until now.
+         */
         private void setupClient() {
+            if (beakerClient != null) return;
             if (beakerURL != null && !"".equals(beakerURL.trim())) {
                 beakerClient = BeakerServer.getXmlRpcClient(beakerURL);
                 //beakerClient.authenticate(login, password);
@@ -393,12 +412,8 @@ public class BeakerBuilder extends Builder {
 
         /**
          * Tries to connect to Beaker server and verify that provided credential works.
-         *
-         * @param beakerURL
-         * @param login
-         * @param password
-         * @return
          */
+        @Restricted(DoNotUse.class)
         public FormValidation doTestConnection(@QueryParameter("beakerURL") final String beakerURL,
                 @QueryParameter("login") final String login, @QueryParameter("password") final String password) {
             LOGGER.fine("Trying to get client for " + beakerURL);
@@ -418,31 +433,21 @@ public class BeakerBuilder extends Builder {
             return beakerURL;
         }
 
-        public void setBeakerURL(String beakerURL) {
-            this.beakerURL = beakerURL;
-        }
-
         public String getLogin() {
             return login;
-        }
-
-        public void setLogin(String login) {
-            this.login = login;
         }
 
         public String getPassword() {
             return password;
         }
 
-        public void setPassword(String password) {
-            this.password = password;
-        }
-
         public BeakerClient getBeakerClient() {
+            setupClient();
             return beakerClient;
         }
 
         public Identity getIdentity() {
+            setupClient();
             return identity;
         }
     }
