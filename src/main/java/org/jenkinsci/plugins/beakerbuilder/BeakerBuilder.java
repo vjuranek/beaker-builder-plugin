@@ -39,9 +39,9 @@ import com.github.vjuranek.beaker4j.remote_model.TaskStatus;
 /**
  * Builder which provides possibility to schedule external Beaker job, waits for its completion and sets up job result
  * according to Beaker job status.
- * 
+ *
  * @author vjuranek
- * 
+ *
  */
 public class BeakerBuilder extends Builder {
 
@@ -61,7 +61,7 @@ public class BeakerBuilder extends Builder {
     public JobSource getJobSource() {
         return jobSource;
     }
-    
+
     public boolean getDownloadFiles() {
         return downloadFiles;
     }
@@ -79,7 +79,7 @@ public class BeakerBuilder extends Builder {
         if (!verifyFile(jobFile, build, console))
             return false;
         // TODO cleanup before leave - delete temp job XML file
-        
+
         log(console, "[Beaker] INFO: Job XML file prepared");
         String jobXml = readJobFile(jobFile, build);
         if (jobXml == null) {
@@ -95,20 +95,20 @@ public class BeakerBuilder extends Builder {
             return false;
         }
         //TODO cancel job in Beaker if running before leaving
-        
+
         // job exists in Beaker, we can create an action pointing to it
         int jobNum = getJobNumber(job);
         BeakerBuildAction bba = new BeakerBuildAction(jobNum, getDescriptor().getBeakerURL());
         build.addAction(bba);
         log(console, "[Beaker] INFO: Job successfuly submitted to Beaker, job ID is " + job.getJobId());
-        
+
         // wait for job completion
         if (!waitForJobCompletion(job, console))
             return false;
 
         // set build result according to Beaker result
         setBuildResult(job, build, console);
-        
+
         //try to download job files into workspace
         if(downloadFiles)
             downloadJobFiles(job, build, console);
@@ -118,7 +118,7 @@ public class BeakerBuilder extends Builder {
 
     /**
      * Prepares job XML file in workspace
-     * 
+     *
      * @param build
      * @param listener
      * @return True if job is prepared.
@@ -136,11 +136,11 @@ public class BeakerBuilder extends Builder {
         }
         return jobFile;
     }
-    
+
     private boolean verifyFile(File jobFile, AbstractBuild<?, ?> build, ConsoleLogger console) {
         if(jobFile == null)
             return false;
-        
+
         FilePath fp = new FilePath(build.getWorkspace(), jobFile.getPath());
         try {
             if (!fp.exists()) {
@@ -161,10 +161,10 @@ public class BeakerBuilder extends Builder {
         }
 
         //TODO verify it's valid XML file
-        
+
         return true;
     }
-    
+
     private String readJobFile(File jobFile, AbstractBuild<?, ?> build) {
         String jobXml = null;
         try {
@@ -180,7 +180,7 @@ public class BeakerBuilder extends Builder {
 
     /**
      * Schedules job on Beaker server. If scheduling is successful, add {@link BeakerBuildAction} to the job.
-     * 
+     *
      * @param build
      * @return True if job scheduling is successful.
      */
@@ -196,7 +196,7 @@ public class BeakerBuilder extends Builder {
         }
         return job;
     }
-    
+
     private int getJobNumber(BeakerJob job) {
         Integer jobNum = new Integer(0);
         try {
@@ -210,7 +210,7 @@ public class BeakerBuilder extends Builder {
     /**
      * Starts {@link TaskWatchdog} and waits until job finishes. If job status has changes, sends notification to the
      * console log.
-     * 
+     *
      * @return True if waiting for job finishes normally.
      */
     private boolean waitForJobCompletion(BeakerJob job, ConsoleLogger console) {
@@ -239,7 +239,7 @@ public class BeakerBuilder extends Builder {
 
     /**
      * Sets the build result according to Beaker job result.
-     * 
+     *
      * @param build
      */
     private void setBuildResult(BeakerJob job, AbstractBuild<?, ?> build, ConsoleLogger console) {
@@ -293,7 +293,7 @@ public class BeakerBuilder extends Builder {
             LOGGER.log(Level.INFO, "Beaker error: creating dir for Beaker files interrupted", e);
             log(console, "[Beaker] ERROR: Creating dir for Beaker files interrupted: " + e.getMessage());
         }
-        
+
         log(console, "[Beaker] INFO: Trying to download job file into " + beakerFileDir.getRemote());
         try {
             ArrayList<Map<String, String>> files = job.getFiles();
@@ -308,18 +308,17 @@ public class BeakerBuilder extends Builder {
                } catch(InterruptedException e) {
                    log(console, "[Beaker] ERROR: Something went wrong when downloading " + f.get("filename") + ", check Jenkins log for details.");
                    LOGGER.log(Level.INFO, "Beaker error: cannot donwload file " + f.get("filename"), e);
-               }   
+               }
             }
         } catch(XmlRpcException e) {
             LOGGER.log(Level.INFO, "Beaker error: cannot download files from Beaker ", e);
             log(console, "[Beaker] ERROR: Cannot download job files from Beaker: " + e.getMessage());
         }
-        
     }
-    
+
     /**
      * Logs messages into Jenkins console.
-     * 
+     *
      * @param message
      *            Message to be logges
      */
@@ -360,7 +359,7 @@ public class BeakerBuilder extends Builder {
          */
         public DescriptorImpl() {
             load();
-            setupClient(); 
+            setupClient();
         }
 
         @Override
@@ -391,10 +390,10 @@ public class BeakerBuilder extends Builder {
                 identity.authenticate();
             }
         }
-        
+
         /**
          * Tries to connect to Beaker server and verify that provided credential works.
-         * 
+         *
          * @param beakerURL
          * @param login
          * @param password
@@ -411,12 +410,10 @@ public class BeakerBuilder extends Builder {
                     return FormValidation.error("Cannot connect to " + beakerURL + " as " + login);
                 return FormValidation.ok("Connected as " + ident.whoAmI());
             } catch (Exception e) {
-                e.printStackTrace();
-                return FormValidation.error("Somethign went wrong, cannot connect to " + beakerURL + ", cause: "
-                        + e.getCause());
+                return FormValidation.error(e, "Somethign went wrong, cannot connect to " + beakerURL);
             }
         }
-        
+
         public String getBeakerURL() {
             return beakerURL;
         }
@@ -444,13 +441,11 @@ public class BeakerBuilder extends Builder {
         public BeakerClient getBeakerClient() {
             return beakerClient;
         }
-        
+
         public Identity getIdentity() {
             return identity;
         }
-
     }
 
     private static final Logger LOGGER = Logger.getLogger(BeakerBuilder.class.getName());
-
 }

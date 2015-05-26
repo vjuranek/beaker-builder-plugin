@@ -14,23 +14,22 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * Represent job XML which is entered directly in job config page.
- * 
- * @author vjuranek
  *
+ * @author vjuranek
  */
 public class StringJobSource extends JobSource {
-    
+
     private final String jobContent;
-    
+
     @DataBoundConstructor
     public StringJobSource(String jobContent){
         this.jobContent = jobContent;
     }
-    
+
     public String getJobContent() {
         return jobContent;
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -43,12 +42,12 @@ public class StringJobSource extends JobSource {
     public DescriptorImpl getDescriptor(){
         return (DescriptorImpl)Jenkins.getInstance().getDescriptor(getClass());
     }
-    
+
     @Extension
     public static class DescriptorImpl extends JobSourceDescriptor{
+        @Override
         public String getDisplayName() {
             return "String script source";
         }
     }
-
 }
