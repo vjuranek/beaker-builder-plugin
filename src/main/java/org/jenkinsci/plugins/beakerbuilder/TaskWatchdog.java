@@ -21,12 +21,12 @@ public class TaskWatchdog extends TimerTask {
      * Default delay before watchdog starts to monitor status task. It's here for convenience so that all callers can
      * use same default.
      */
-    public static final int DEFAULT_DELAY = 1000 * 60 * 5; // 5 minutes
+    public static final int DEFAULT_DELAY = Integer.getInteger(TaskWatchdog.class.getName() + ".DEFAULT_DELAY", 60 * 5) * 1000; // 5 minutes
     /**
      * Default period how often the task status is checked in Beaker. It's here for convenience so that all callers can
      * use same default.
      */
-    public static final int DEFAULT_PERIOD = 1000 * 60 * 5; // 5 minutes
+    public static final int DEFAULT_PERIOD = Integer.getInteger(TaskWatchdog.class.getName() + ".DEFAULT_PERIOD", 60 * 5) * 1000; // 5 minutes
 
     /**
      * Task to be monitored

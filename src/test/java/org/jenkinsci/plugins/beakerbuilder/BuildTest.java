@@ -23,17 +23,38 @@
  */
 package org.jenkinsci.plugins.beakerbuilder;
 
+import static org.junit.Assert.assertEquals;
+import hudson.ExtensionList;
 import hudson.model.FreeStyleBuild;
 import hudson.model.Result;
+import hudson.model.Descriptor;
 import hudson.model.FreeStyleProject;
 
+import org.jenkinsci.plugins.beakerbuilder.BeakerBuilder.DescriptorImpl;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.mockito.Mockito;
+
+import com.github.vjuranek.beaker4j.client.BeakerClient;
+import com.github.vjuranek.beaker4j.remote_model.BeakerJob;
+import com.github.vjuranek.beaker4j.remote_model.BeakerTask;
+import com.github.vjuranek.beaker4j.remote_model.BeakerTask.TaskInfo;
+import com.github.vjuranek.beaker4j.remote_model.Identity;
+import com.github.vjuranek.beaker4j.remote_model.TaskResult;
+import com.github.vjuranek.beaker4j.remote_model.TaskStatus;
 
 public class BuildTest {
 
     public @Rule JenkinsRule j = new JenkinsRule();
+
+    private Identity identity;
+    private BeakerClient client;
+
+    static { // Reduce wait times for testing to 1 second
+        System.setProperty("org.jenkinsci.plugins.beakerbuilder.TaskWatchdog.DEFAULT_DELAY", "1");
+        System.setProperty("org.jenkinsci.plugins.beakerbuilder.TaskWatchdog.DEFAULT_PERIOD", "1");
+    }
 
     @Test
     public void notConfigured() throws Exception {
@@ -43,5 +64,47 @@ public class BuildTest {
         FreeStyleBuild b = p.scheduleBuild2(0).get();
         j.assertBuildStatus(Result.FAILURE, b);
         j.assertLogContains("Beaker connection not configured properly", b);
+    }
+
+    @Test
+    public void execute() throws Exception {
+        fakeBeakerConnection();
+
+        FreeStyleProject p = j.createFreeStyleProject();
+        final BeakerBuilder builder = new BeakerBuilder(new StringJobSource("<job>"), false);
+        p.getBuildersList().add(builder);
+
+        BeakerJob job = Mockito.mock(BeakerJob.class);
+        Mockito.when(client.scheduleJob("<job>")).thenReturn(job);
+        Mockito.when(job.getJobId()).thenReturn("J:42");
+        Mockito.when(job.getJobNumber()).thenReturn(42);
+
+        BeakerTask task = Mockito.mock(BeakerTask.class);
+        Mockito.when(job.getBeakerTask()).thenReturn(task);
+
+        TaskInfo info = Mockito.mock(TaskInfo.class);
+        Mockito.when(task.getInfo()).thenReturn(info);
+        Mockito.when(info.isFinished()).thenReturn(true);
+        Mockito.when(info.getState()).thenReturn(TaskStatus.COMPLETED);
+        Mockito.when(info.getResult()).thenReturn(TaskResult.PASS);
+
+        FreeStyleBuild build = j.buildAndAssertSuccess(p);
+        assertEquals(42, build.getAction(BeakerBuildAction.class).getJobNumber());
+    }
+
+    private void fakeBeakerConnection() {
+        DescriptorImpl desc = j.jenkins.getDescriptorByType(BeakerBuilder.DescriptorImpl.class);
+
+        // Mock Jenkins descriptor
+        ExtensionList<Descriptor> descriptors = j.jenkins.getExtensionList(Descriptor.class);
+        descriptors.remove(desc);
+        DescriptorImpl spy = Mockito.spy(desc);
+        descriptors.add(spy);
+
+        identity = Mockito.mock(Identity.class);
+        client = Mockito.mock(BeakerClient.class);
+
+        Mockito.when(spy.getIdentity()).thenReturn(identity);
+        Mockito.when(spy.getBeakerClient()).thenReturn(client);
     }
 }

@@ -31,7 +31,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven-hpi-plugin.version>1.95</maven-hpi-plugin.version><!-- explicitly specifying the latest version here because one we get from the parent POM tends to lag behind a bit -->
-        <version.beaker4j>1.0.1</version.beaker4j>
+        <version.beaker4j>1.0.2</version.beaker4j>
     </properties>
 
     <dependencies>
@@ -39,6 +39,18 @@
             <groupId>com.github.vjuranek.beaker4j</groupId>
             <artifactId>beaker4j</artifactId>
             <version>${version.beaker4j}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>1.8.5</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+            <version>1.2.1</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

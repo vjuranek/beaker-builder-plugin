@@ -35,7 +35,6 @@ import org.kohsuke.stapler.StaplerRequest;
 import com.github.vjuranek.beaker4j.beaker.BeakerServer;
 import com.github.vjuranek.beaker4j.client.BeakerClient;
 import com.github.vjuranek.beaker4j.remote_model.BeakerJob;
-import com.github.vjuranek.beaker4j.remote_model.BeakerTask;
 import com.github.vjuranek.beaker4j.remote_model.Identity;
 import com.github.vjuranek.beaker4j.remote_model.TaskResult;
 import com.github.vjuranek.beaker4j.remote_model.TaskStatus;
@@ -101,8 +100,7 @@ public class BeakerBuilder extends Builder {
         //TODO cancel job in Beaker if running before leaving
 
         // job exists in Beaker, we can create an action pointing to it
-        int jobNum = getJobNumber(job);
-        BeakerBuildAction bba = new BeakerBuildAction(jobNum, getDescriptor().getBeakerURL());
+        BeakerBuildAction bba = new BeakerBuildAction(job.getJobNumber(), getDescriptor().getBeakerURL());
         build.addAction(bba);
         log(console, "[Beaker] INFO: Job successfuly submitted to Beaker, job ID is " + job.getJobId());
 
@@ -209,16 +207,6 @@ public class BeakerBuilder extends Builder {
         return job;
     }
 
-    private int getJobNumber(BeakerJob job) {
-        Integer jobNum = new Integer(0);
-        try {
-            jobNum = new Integer(job.getJobId().substring(2, job.getJobId().length()));
-        } catch (NumberFormatException e) {
-            LOGGER.log(Level.INFO, "Beaker error: cannot convert job ID " + job.getJobId() + " to int");
-        }
-        return jobNum.intValue();
-    }
-
     /**
      * Starts {@link TaskWatchdog} and waits until job finishes. If job status has changes, sends notification to the
      * console log.
@@ -226,8 +214,7 @@ public class BeakerBuilder extends Builder {
      * @return True if waiting for job finishes normally.
      */
     private boolean waitForJobCompletion(BeakerJob job, ConsoleLogger console) {
-        BeakerTask jobTask = new BeakerTask(job.getJobId(), job.getBeakerClient());
-        TaskWatchdog watchdog = new TaskWatchdog(jobTask, TaskStatus.NEW);
+        TaskWatchdog watchdog = new TaskWatchdog(job.getBeakerTask(), TaskStatus.NEW);
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(watchdog, TaskWatchdog.DEFAULT_DELAY, TaskWatchdog.DEFAULT_PERIOD);
         synchronized (watchdog) {
@@ -255,10 +242,9 @@ public class BeakerBuilder extends Builder {
      * @param build
      */
     private void setBuildResult(BeakerJob job, AbstractBuild<?, ?> build, ConsoleLogger console) {
-        BeakerTask jobTask = new BeakerTask(job.getJobId(), job.getBeakerClient());
         TaskResult result = null;
         try {
-            result = jobTask.getInfo().getResult();
+            result = job.getBeakerTask().getInfo().getResult();
         } catch (XmlRpcException e) {
             LOGGER.log(Level.INFO, "Beaker error: cannot get result from Beaker ", e);
             log(console, "[Beaker] ERROR: Cannot get job result from Beaker, check Jenkins logs for more details");
@@ -344,7 +330,7 @@ public class BeakerBuilder extends Builder {
     }
 
     @Extension
-    public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
+    public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         /**
          * Beaker server URL
