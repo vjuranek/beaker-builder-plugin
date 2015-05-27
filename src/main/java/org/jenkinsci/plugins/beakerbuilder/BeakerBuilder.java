@@ -20,6 +20,8 @@ import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.CheckForNull;
+
 import net.sf.json.JSONObject;
 
 import org.apache.xmlrpc.XmlRpcException;
@@ -186,13 +188,21 @@ public class BeakerBuilder extends Builder {
      * @param build
      * @return True if job scheduling is successful.
      */
-    private BeakerJob scheduleJob(String jobXml, AbstractBuild<?, ?> build, ConsoleLogger console) {
+    private @CheckForNull BeakerJob scheduleJob(String jobXml, AbstractBuild<?, ?> build, ConsoleLogger console) {
         LOGGER.fine("Job XML is: \n" + jobXml);
         BeakerJob job = null;
         try {
+            final BeakerClient client = getDescriptor().getBeakerClient();
+            final Identity identity = getDescriptor().getIdentity();
+
+            if (client == null || identity == null) {
+                log(console, "[Beaker] ERROR: Beaker connection not configured properly");
+                return null;
+            }
+
             //client credentials can expire after some time, renew them before scheduling of each build
-            getDescriptor().getIdentity().authenticate();
-            job = getDescriptor().getBeakerClient().scheduleJob(jobXml);
+            identity.authenticate();
+            job = client.scheduleJob(jobXml);
         } catch(XmlRpcException e) {
             log(console, "[Beaker] ERROR: Job scheduling has failed, reason: " + e.getMessage());
         }
@@ -406,7 +416,7 @@ public class BeakerBuilder extends Builder {
                 beakerClient = BeakerServer.getXmlRpcClient(beakerURL);
                 //beakerClient.authenticate(login, password);
                 identity = new Identity(login, password, beakerClient);
-                identity.authenticate();
+                identity.authenticate(); // TODO can probably be avoided as we do not guarantee identity to be authenticated anyway
             }
         }
 
@@ -441,12 +451,23 @@ public class BeakerBuilder extends Builder {
             return password;
         }
 
-        public BeakerClient getBeakerClient() {
+        /**
+         * @return Can be null if not configured properly.
+         */
+        public @CheckForNull BeakerClient getBeakerClient() {
             setupClient();
             return beakerClient;
         }
 
-        public Identity getIdentity() {
+        /**
+         * Beaker identity.
+         *
+         * Client is expected to {@link Identity#authenticate()} as previous
+         * authentication authentication of the same identity can be expired.
+         *
+         * @return Can be null if not configured properly.
+         */
+        public @CheckForNull Identity getIdentity() {
             setupClient();
             return identity;
         }
