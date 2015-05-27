@@ -1,12 +1,11 @@
 package org.jenkinsci.plugins.beakerbuilder;
 
 import hudson.Extension;
-import hudson.FilePath;
+import hudson.Util;
 import hudson.model.BuildListener;
 import hudson.model.AbstractBuild;
 
-import java.io.File;
-import java.io.IOException;
+import javax.annotation.Nonnull;
 
 import jenkins.model.Jenkins;
 
@@ -19,24 +18,20 @@ import org.kohsuke.stapler.DataBoundConstructor;
  */
 public class StringJobSource extends JobSource {
 
-    private final String jobContent;
+    private final @Nonnull String jobContent;
 
     @DataBoundConstructor
     public StringJobSource(String jobContent){
-        this.jobContent = jobContent;
+        this.jobContent = Util.fixNull(jobContent);
     }
 
-    public String getJobContent() {
+    public @Nonnull String getJobContent() {
         return jobContent;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public File createJobFile(AbstractBuild<?,?> build, BuildListener listener) throws InterruptedException, IOException {
-        FilePath path = createDefaultJobFile(jobContent, build, listener);
-        return new File(path.getRemote());
+    protected @Nonnull String getDeclaredContent(@Nonnull AbstractBuild<?,?> build, @Nonnull BuildListener listener) {
+        return jobContent;
     }
 
     public DescriptorImpl getDescriptor(){

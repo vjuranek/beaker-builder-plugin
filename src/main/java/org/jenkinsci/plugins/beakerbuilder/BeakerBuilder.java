@@ -11,7 +11,6 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -77,21 +76,14 @@ public class BeakerBuilder extends Builder {
             throws InterruptedException {
         ConsoleLogger console = new ConsoleLogger(listener);
 
-        // prepare job XML file
-        File jobFile = prepareJob(build, console);
-        if (!verifyFile(jobFile, build, console))
-            return false;
-        // TODO cleanup before leave - delete temp job XML file
-
-        log(console, "[Beaker] INFO: Job XML file prepared");
-        String jobXml = readJobFile(jobFile, build);
-        if (jobXml == null) {
-            log(console, "[Beaker] ERROR: Cannot read job source file " + jobFile.getPath());
+        String jobXml;
+        try {
+            jobXml = jobSource.getJobContent(build, listener);
+        } catch (IOException ex) {
+            log(console, "[Beaker] ERROR: Cannot create job source file, cause " + ex.getMessage());
             return false;
         }
 
-        // schedule job
-        LOGGER.fine("Scheduling Beaker job from file " + jobFile.getPath());
         BeakerJob job = scheduleJob(jobXml, build, console);
         if (job == null) {
             log(console, "[Beaker] ERROR: Something went wrong when submitting job to Beaker, got NULL from Beaker, see console and Jenkins log for details");
@@ -116,68 +108,6 @@ public class BeakerBuilder extends Builder {
             downloadJobFiles(job, build, console);
 
         return true;
-    }
-
-    /**
-     * Prepares job XML file in workspace
-     *
-     * @param build
-     * @param listener
-     * @return True if job is prepared.
-     * @throws InterruptedException
-     */
-    private File prepareJob(AbstractBuild<?, ?> build, ConsoleLogger console) throws InterruptedException {
-        File jobFile = null;
-        // create temporary file with Beaker job
-        try {
-            jobFile = jobSource.createJobFile(build, console.getListener());
-        } catch (IOException ioe) {
-            log(console, "[Beaker] ERROR: Could not get canonical path to workspace:" + ioe);
-            ioe.printStackTrace();
-            build.setResult(Result.FAILURE);
-        }
-        return jobFile;
-    }
-
-    private boolean verifyFile(File jobFile, AbstractBuild<?, ?> build, ConsoleLogger console) {
-        if(jobFile == null)
-            return false;
-
-        FilePath fp = new FilePath(build.getWorkspace(), jobFile.getPath());
-        try {
-            if (!fp.exists()) {
-                log(console, "[Beaker] ERROR: Job file " + fp.getName() + " doesn't exists on channel" + fp.getChannel() + "!");
-                //build.setResult(Result.FAILURE);
-                return false;
-            }
-        } catch (IOException e) {
-            log(console, "[Beaker] ERROR: failed to verify that " + fp.getName() + " exists on channel" + fp.getChannel()
-                    + "! IOException cought, check Jenkins log for more details");
-            LOGGER.log(Level.INFO,
-                    "Beaker error: failed to verify that " + fp.getName() + " exists on channel" + fp.getChannel()
-                            + "!", e);
-            //build.setResult(Result.FAILURE);
-            return false;
-        } catch(InterruptedException e) {
-            //TODO log exception
-        }
-
-        //TODO verify it's valid XML file
-
-        return true;
-    }
-
-    private String readJobFile(File jobFile, AbstractBuild<?, ?> build) {
-        String jobXml = null;
-        try {
-            FilePath fp = new FilePath(build.getWorkspace(), jobFile.getPath());
-            jobXml = fp.readToString();
-            LOGGER.fine("job XML: " + jobXml);
-        } catch (IOException e) {
-            LOGGER.log(Level.INFO, "Beaker error: failed to read Beaker job XML file "
-                    + jobFile.getPath(), e);
-        }
-        return jobXml;
     }
 
     /**
@@ -260,10 +190,8 @@ public class BeakerBuilder extends Builder {
         // TODO add ABORTED result
         // TODO add CANCELED result
         switch (result) {
-        case FAIL:
-            build.setResult(Result.FAILURE);
-            break;
         case PANIC:
+        case FAIL:
             build.setResult(Result.FAILURE);
             break;
         case WARN:

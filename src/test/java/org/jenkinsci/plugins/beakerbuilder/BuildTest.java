@@ -23,6 +23,8 @@
  */
 package org.jenkinsci.plugins.beakerbuilder;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 import hudson.ExtensionList;
 import hudson.model.FreeStyleBuild;
@@ -34,6 +36,7 @@ import org.jenkinsci.plugins.beakerbuilder.BeakerBuilder.DescriptorImpl;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.SingleFileSCM;
 import org.mockito.Mockito;
 
 import com.github.vjuranek.beaker4j.client.BeakerClient;
@@ -67,17 +70,81 @@ public class BuildTest {
     }
 
     @Test
-    public void execute() throws Exception {
-        fakeBeakerConnection();
+    public void pass() throws Exception {
+        mockBeakerConnection();
+        mockBeakerExecution("<job>", 42, TaskStatus.COMPLETED, TaskResult.PASS);
 
         FreeStyleProject p = j.createFreeStyleProject();
         final BeakerBuilder builder = new BeakerBuilder(new StringJobSource("<job>"), false);
         p.getBuildersList().add(builder);
 
+        FreeStyleBuild build = j.buildAndAssertSuccess(p);
+        assertEquals(42, build.getAction(BeakerBuildAction.class).getJobNumber());
+    }
+
+    @Test
+    public void warn() throws Exception {
+        mockBeakerConnection();
+        mockBeakerExecution("<job>", 42, TaskStatus.COMPLETED, TaskResult.WARN);
+
+        FreeStyleProject p = j.createFreeStyleProject();
+        final BeakerBuilder builder = new BeakerBuilder(new StringJobSource("<job>"), false);
+        p.getBuildersList().add(builder);
+
+        FreeStyleBuild build = p.scheduleBuild2(0).get();
+        j.assertBuildStatus(Result.UNSTABLE, build);
+        assertEquals(42, build.getAction(BeakerBuildAction.class).getJobNumber());
+    }
+
+    @Test
+    public void fail() throws Exception {
+        mockBeakerConnection();
+        mockBeakerExecution("<job>", 42, TaskStatus.COMPLETED, TaskResult.FAIL);
+
+        FreeStyleProject p = j.createFreeStyleProject();
+        final BeakerBuilder builder = new BeakerBuilder(new StringJobSource("<job>"), false);
+        p.getBuildersList().add(builder);
+
+        FreeStyleBuild build = p.scheduleBuild2(0).get();
+        j.assertBuildStatus(Result.FAILURE, build);
+        assertEquals(42, build.getAction(BeakerBuildAction.class).getJobNumber());
+    }
+
+    @Test
+    public void panic() throws Exception {
+        mockBeakerConnection();
+        mockBeakerExecution("<file_job>", 42, TaskStatus.COMPLETED, TaskResult.PANIC);
+
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.setScm(new SingleFileSCM("job.xml", "<file_job>"));
+        final BeakerBuilder builder = new BeakerBuilder(new FileJobSource("job.xml"), false);
+        p.getBuildersList().add(builder);
+
+        FreeStyleBuild build = p.scheduleBuild2(0).get();
+        j.assertBuildStatus(Result.FAILURE, build);
+        assertEquals(42, build.getAction(BeakerBuildAction.class).getJobNumber());
+    }
+
+    @Test
+    public void noSuchFile() throws Exception {
+        mockBeakerConnection();
+        mockBeakerExecution("<file_job>", 42, TaskStatus.COMPLETED, TaskResult.PANIC);
+
+        FreeStyleProject p = j.createFreeStyleProject();
+        final BeakerBuilder builder = new BeakerBuilder(new FileJobSource("job.xml"), false);
+        p.getBuildersList().add(builder);
+
+        FreeStyleBuild build = p.scheduleBuild2(0).get();
+        j.assertBuildStatus(Result.FAILURE, build);
+
+        assertThat(build.getLog(), containsString("No such file or directory"));
+    }
+
+    private void mockBeakerExecution(String xml, int number, TaskStatus status, TaskResult result) throws Exception {
         BeakerJob job = Mockito.mock(BeakerJob.class);
-        Mockito.when(client.scheduleJob("<job>")).thenReturn(job);
-        Mockito.when(job.getJobId()).thenReturn("J:42");
-        Mockito.when(job.getJobNumber()).thenReturn(42);
+        Mockito.when(client.scheduleJob(xml)).thenReturn(job);
+        Mockito.when(job.getJobId()).thenReturn("J:" + number);
+        Mockito.when(job.getJobNumber()).thenReturn(number);
 
         BeakerTask task = Mockito.mock(BeakerTask.class);
         Mockito.when(job.getBeakerTask()).thenReturn(task);
@@ -85,14 +152,11 @@ public class BuildTest {
         TaskInfo info = Mockito.mock(TaskInfo.class);
         Mockito.when(task.getInfo()).thenReturn(info);
         Mockito.when(info.isFinished()).thenReturn(true);
-        Mockito.when(info.getState()).thenReturn(TaskStatus.COMPLETED);
-        Mockito.when(info.getResult()).thenReturn(TaskResult.PASS);
-
-        FreeStyleBuild build = j.buildAndAssertSuccess(p);
-        assertEquals(42, build.getAction(BeakerBuildAction.class).getJobNumber());
+        Mockito.when(info.getState()).thenReturn(status);
+        Mockito.when(info.getResult()).thenReturn(result);
     }
 
-    private void fakeBeakerConnection() {
+    private void mockBeakerConnection() {
         DescriptorImpl desc = j.jenkins.getDescriptorByType(BeakerBuilder.DescriptorImpl.class);
 
         // Mock Jenkins descriptor
